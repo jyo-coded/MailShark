@@ -2,3 +2,5 @@
 *.png binary
 *.woff2 binary
 *.zip binary
+*.eml binary
+*.mbox binary
