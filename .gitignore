@@ -1,0 +1,22 @@
+node_modules/
+dist/
+artifacts/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+.web-extension-id
+web-ext-artifacts/
+
+# Python lab
+lab/.venv/
+lab/**/__pycache__/
+lab/*.egg-info/
+lab/data/
+lab/out/
+.pytest_cache/
+
+# Local corpora must never be committed (privacy + licensing)
+datasets/
+*.mbox
+!engine/test/fixtures/**/*.mbox
