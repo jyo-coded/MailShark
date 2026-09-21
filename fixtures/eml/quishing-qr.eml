@@ -1,0 +1,68 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; spf=pass (google.com: domain of hr@hr-portal-docs.com designates 194.26.29.4 as permitted sender) smtp.mailfrom=hr@hr-portal-docs.com; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hr-portal-docs.com
+Return-Path: <bounce@hr-portal-docs.com>
+Received: from smtp.hr-portal-docs.com (smtp.hr-portal-docs.com. [194.26.29.4]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 194.26.29.4 as permitted sender) client-ip=194.26.29.4;
+Authentication-Results: mx.google.com; spf=pass (google.com: domain of hr@hr-portal-docs.com designates 194.26.29.4 as permitted sender) smtp.mailfrom=hr@hr-portal-docs.com; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hr-portal-docs.com
+From: Microsoft Authenticator <hr@hr-portal-docs.com>
+To: victim@gmail.com
+Subject: Action required: re-enroll multi-factor authentication
+Date: Mon, 21 Sep 2026 15:48:59 +0000
+Message-ID: <mfa-1@hr-portal-docs.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_MS_mix_000004"
+
+------=_MS_mix_000004
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PHA+WW91ciBNRkEgZW5yb2xsbWVudCBleHBpcmVzIHRvZGF5LiBTY2FuIHRoZSBRUiBjb2RlIHdp
+dGggeW91ciBwaG9uZSBjYW1lcmEgdG8ga2VlcCB5b3VyIGFjY291bnQgYWN0aXZlLjwvcD48aW1n
+IHNyYz0iY2lkOnFyMSIgYWx0PSJRUiI+
+------=_MS_mix_000004
+Content-Type: image/png; name="qr.png"
+Content-Disposition: inline; filename="qr.png"
+Content-ID: <qr1>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAPAAAADwCAYAAAA+VemSAAAAAklEQVR4AewaftIAAAfCSURBVO3B
+gY0cwREEwczG+e9y6Q3YETDE8p4tVYT5QVWtNFTVWkNVrTVU1VpDVa01VNVaQ1WtNVTVWkNVrTVU
+1VpDVa01VNVaQ1Wt9eEPqGyUhLeovCkJb1H5bUm4pfIkCbdUNkrCjaGq1hqqaq2hqtYaqmqtoarW
+GqpqrQ8vS8JvUvmGJJyoPEnCm1RuJeE3qZwk4YnKSRJuJeE3qbxlqKq1hqpaa6iqtYaqWmuoqrU+
+fInKm5LwFpU3JeEtKreS8CaVb1D5TSpvSsLfNlTVWkNVrTVU1VpDVa01VNVaQ1Wt9aH+qyS8ReUk
+CU+ScKLyFpVbSbilcpKEujNU1VpDVa01VNVaQ1WtNVTVWh/qa5JwovIWlW9QeZPKrST8Pxuqaq2h
+qtYaqmqtoarWGqpqraGq1vrwJUnYSOVWEm4l4YnKSRLeonKShCcqb0rCE5VvSMI2Q1WtNVTVWkNV
+rTVU1VpDVa314WUq/0uS8ETllspJEt6icpKEb0jCE5XfpvK/YqiqtYaqWmuoqrWGqlprqKq1hqpa
+68MfSEKdqbwlCf+qJJyo/KYk/D8YqmqtoarWGqpqraGq1hqqai3zg0sqJ0l4ovLbknBL5Tcl4U0q
+T5JwovIkCbdUbiXhlspvS8LfNlTVWkNVrTVU1VpDVa01VNVaQ1Wt9eEPJOFE5UkSbqncSsKJyluS
+8CaVt6j8NpUnSThR+U1JOFF5i8pJEm4MVbXWUFVrDVW11lBVaw1VtZb5wYtUbiXhicqbkvBE5U1J
+eKLyDUk4UXmShDep3ErCLZVbSXiicpKEJyq3kvCWoarWGqpqraGq1hqqaq2hqtYaqmot84MvULmV
+hBOVJ0k4UXmShBOVtyThROVJEk5UviEJT1TelIRbKk+ScEvltyXhxlBVaw1VtdZQVWsNVbXWUFVr
+ffiSJJyo3ErCE5VvSMKJyq0kPFF5UxJuqTxJwptUbiXhlspbknCi8rcNVbXWUFVrDVW11lBVaw1V
+tdZQVWuZH1xS+W1JuKXyliTcUjlJwi2VJ0m4pfKvSsItlZMkvEXlTUm4MVTVWkNVrTVU1VpDVa01
+VNVaH74kCbdUTlTekoQTlVsqT5LwDSpvSsItlVtJeKLyDSq3knCi8iQJbxmqaq2hqtYaqmqtoarW
+GqpqraGq1vrwJSonSXiShBOVJ0k4UbmVhFtJuKXyJAm3knBL5ZbKNyThROU3qZwk4W8bqmqtoarW
+GqpqraGq1hqqaq0PX5KEb1C5pXIrCbdUbqncUvmGJNxSuaVyKwknKm9Jwi2VkyTcGKpqraGq1hqq
+aq2hqtYaqmqtoarW+vAPU7mVhFsqJ0m4pXIrCW9ROUnCE5UTlVtJeJKEE5VbSXiicisJJypPVE6S
+8LcNVbXWUFVrDVW11lBVaw1VtZb5wf8QlZMk3FK5lYRbKk+ScKLyJAm3VE6ScEvlVhJuqXxDEp6o
+3ErCW4aqWmuoqrWGqlprqKq1hqpaa6iqtcwPLqmcJOEbVJ4k4ZbKb0vCNipvSsITlY2S8LcNVbXW
+UFVrDVW11lBVaw1VtZb5wYtUniThG1ROkvBE5SQJb1G5lYQTlSdJuKXypiQ8UTlJwi2VJ0k4UXlL
+Ek5UniThLUNVrTVU1VpDVa01VNVaQ1WtNVTVWh/+gMpJEp6ofEMSTlR+UxJuqdxSuZWEE5VvUHmS
+hJMkPFE5ScJbVE6S8ETlJAk3hqpaa6iqtYaqWmuoqrWGqlrrw5ck4ZbKSRKeqNxKwjeonCThVhK+
+IQlPVN6UhFsqb1G5lYQTlSdJeMtQVWsNVbXWUFVrDVW11lBVaw1VtdaHf4DKLZUnSfhtKk+ScCsJ
+t1ROknBL5UkSTlSeJOEbknCi8iQJt1R+01BVaw1VtdZQVWsNVbXWUFVrmR9cUjlJwhOVf1USTlRu
+JeGJykkS3qJyKwnfoHKShCcqvy0Jt1SeJOEtQ1WtNVTVWkNVrTVU1VpDVa01VNVaH/5AEm4l4V+l
+cpKEJyonKm9ROUnCN6j8q5LwFpVbKidJeKJykoQbQ1WtNVTVWkNVrTVU1VpDVa314Q+obJSEJ0k4
+UXmShFsqJypPknCi8g1JeKJykoQnKicqb1E5ScI3qDxJwluGqlprqKq1hqpaa6iqtYaqWmuoqrU+
+vCwJv0nllspJEt6ShBOVJyonSXiickvlTSpPknCi8pYkvEnlXzRU1VpDVa01VNVaQ1WtNVTVWh++
+ROVNSfgGlSdJOFG5lYQnKm9Kwi2VJ0m4pXKShCcqJyq/KQknKk9UTpJwY6iqtYaqWmuoqrWGqlpr
+qKq1hqpa60N9TRJuJeFE5UkSbqncUrmVhFtJOFF5koRbKtsMVbXWUFVrDVW11lBVaw1VtdaH+q+S
+8ETlTSpPknBL5SQJt5LwROUkCbdUbiXhicqtJLwpCX/bUFVrDVW11lBVaw1VtdZQVWsNVbXWhy9J
+wr8qCbeScKJyKwlvScI3JOFE5UkSbiXhVhJuqbwpCX/bUFVrDVW11lBVaw1VtdZQVWt9eJnKNion
+SfgGlW9QeZKEE5UnSThJwhOVWyq3knCi8iQJb1J5koS3DFW11lBVaw1VtdZQVWsNVbXWUFVrmR9U
+1UpDVa01VNVaQ1WtNVTVWkNVrTVU1VpDVa01VNVaQ1WtNVTVWkNVrfUfBJ/lESd/XkYAAAAASUVO
+RK5CYII=
+------=_MS_mix_000004--

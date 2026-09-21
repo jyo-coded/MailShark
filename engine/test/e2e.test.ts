@@ -30,6 +30,8 @@ describe('golden fixtures', () => {
   it('reports the forensic details of the recruiter email', async () => {
     const fx = FIXTURES.find((f) => f.name === 'recruiter-brand-claim');
     const r = await analyzeEmail(fx!.eml());
+    expect(r.summary.subject).toBe('LTI Mind Tree Hiring 2027 – Frontend Developer, Software Engineer | Stipend Up to ₹40K');
+    expect(r.summary.from?.name).toBe('Mind Tree Placement Team');
     expect(r.route.originIp).toBe('103.197.16.155');
     expect(r.route.originHost).toBe('mail.cb1155.mlrctk.com');
     expect(r.esp).toMatchObject({ id: 'mailercloud', customerId: '26174', campaignId: '1634010' });

@@ -41,6 +41,11 @@ function unrelated(): string {
 
 describe('campaign correlation under indicator rotation', () => {
   it('links rotated variants and keeps unrelated mail apart', async () => {
+    if (process.env['WRITE_FIXTURES']) {
+      const { mkdirSync, writeFileSync } = await import('node:fs');
+      mkdirSync('fixtures/eml', { recursive: true });
+      for (const i of [0, 1, 2, 3]) writeFileSync(`fixtures/eml/campaign-sharepoint-${i + 1}.eml`, variant(i), 'latin1');
+    }
     const reports = await Promise.all([0, 1, 2, 3].map((i) => analyzeEmail(variant(i))));
     const other = await analyzeEmail(unrelated());
     const fps = reports.map((r) => r.fingerprint);

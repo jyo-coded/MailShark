@@ -1,0 +1,22 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; spf=fail (google.com: domain of alerts@chase.com does not designate 103.44.12.9 as permitted sender) smtp.mailfrom=alerts@chase.com; dmarc=fail (p=REJECT sp=REJECT dis=QUARANTINE) header.from=chase.com
+Return-Path: <bounce@bulkmailer.biz>
+Received: from smtp.bulkmailer.biz (smtp.bulkmailer.biz. [103.44.12.9]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: fail (google.com: domain of alerts@chase.com does not designate 103.44.12.9 as permitted sender)
+Authentication-Results: mx.google.com; spf=fail (google.com: domain of alerts@chase.com does not designate 103.44.12.9 as permitted sender) smtp.mailfrom=alerts@chase.com; dmarc=fail (p=REJECT sp=REJECT dis=QUARANTINE) header.from=chase.com
+From: Chase Alert <alerts@chase.com>
+To: victim@gmail.com
+Subject: Security alert: unauthorized transaction
+Date: Mon, 21 Sep 2026 15:48:59 +0000
+Message-ID: <55555@smtp.bulkmailer.biz>
+MIME-Version: 1.0
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PHA+V2UgZGV0ZWN0ZWQgYW4gdW5hdXRob3JpemVkIHRyYW5zYWN0aW9uLiBDb25maXJtIHlvdXIg
+aWRlbnRpdHkgaW1tZWRpYXRlbHkgdG8gYXZvaWQgeW91ciBhY2NvdW50IGJlaW5nIGxvY2tlZC48
+L3A+PHA+PGEgaHJlZj0iaHR0cDovLzQ1LjEzMy4xLjgwL2NoYXNlL3ZlcmlmeS5waHAiPlZlcmlm
+eSBub3c8L2E+PC9wPg==

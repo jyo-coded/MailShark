@@ -1,0 +1,27 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; spf=pass smtp.mailfrom=noreply@fileshare-verify.org; dmarc=pass (p=NONE) header.from=fileshare-verify.org
+Return-Path: <bounce@fileshare-verify.org>
+Received: from mail2.fileshare-verify.org (mail2.fileshare-verify.org. [185.102.22.9]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 185.102.22.9 as permitted sender) client-ip=185.102.22.9;
+Authentication-Results: mx.google.com; spf=pass smtp.mailfrom=noreply@fileshare-verify.org; dmarc=pass (p=NONE) header.from=fileshare-verify.org
+From: SharePoint Online <noreply@fileshare-verify.org>
+To: employee2@corp.example
+Subject: Employee2 shared "Q3 Salary Adjustment 2026.pdf" with you
+Date: Mon, 12 Sep 2026 02:15:00 +0000
+Message-ID: <1002.15838@fileshare-verify.org>
+X-Mailer: Microsoft Outlook 16.0
+MIME-Version: 1.0
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PHRhYmxlIGNsYXNzPSJtcy1jYXJkIj48dHI+PHRkIGNsYXNzPSJoZHIiPjxpbWcgc3JjPSJodHRw
+czovL2Nkbi5maWxlc2hhcmUtdmVyaWZ5Lm9yZy9sb2dvLnBuZyI+PC90ZD48L3RyPjx0cj48dGQg
+Y2xhc3M9ImJvZHkiPjxwPkVtcGxveWVlMiBoYXMgc2hhcmVkIGEgZG9jdW1lbnQgd2l0aCB5b3Uu
+PC9wPjxwPlEzIFNhbGFyeSBBZGp1c3RtZW50LiBQbGVhc2UgcmV2aWV3IGRvY3VtZW50IGFuZCBz
+aWduIGluIHdpdGggeW91ciBjb3Jwb3JhdGUgY3JlZGVudGlhbHMgdG8gdmlldyB0aGUgZmlsZSBi
+ZWZvcmUgaXQgZXhwaXJlcyB0b2RheS48L3A+PHA+PGEgY2xhc3M9ImJ0biIgaHJlZj0iaHR0cHM6
+Ly92aWV3LmZpbGVzaGFyZS12ZXJpZnkub3JnL3MvMmZzcmpoZXg5azIvb3BlbiI+T3BlbiBkb2N1
+bWVudDwvYT48L3A+PC90ZD48L3RyPjwvdGFibGU+

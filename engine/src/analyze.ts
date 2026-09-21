@@ -13,7 +13,7 @@ import { detectEsp } from './analyzers/esp';
 import { buildFindings, scoreFindings, sortFindings } from './score';
 import { buildFingerprint } from './fingerprint';
 import { md5Hex, sha1Hex, sha256Hex } from './util/hash';
-import { jaccard, latin1, tokenize } from './util/text';
+import { jaccard, latin1, latin1ToBytes, tokenize } from './util/text';
 
 export const ENGINE_VERSION = '1.0.0';
 
@@ -55,7 +55,10 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
   const mark = (name: string, start: number): void => {
     timings[name] = Math.round((performance.now() - start) * 10) / 10;
   };
-  const raw = typeof input === 'string' ? Uint8Array.from(input, (c) => c.charCodeAt(0) & 0xff) : toBytes(input);
+  // Strings are normally binary (Latin-1, one char per byte). Text pasted by a user may contain real
+  // Unicode characters instead; those are encoded as UTF-8 so nothing is silently truncated.
+  // eslint-disable-next-line no-control-regex
+  const raw = typeof input === 'string' ? (/[^\x00-\xff]/.test(input) ? new TextEncoder().encode(input) : latin1ToBytes(input)) : toBytes(input);
   const rawStr = latin1(raw);
 
   let t = performance.now();

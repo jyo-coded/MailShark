@@ -1,0 +1,75 @@
+/* Gmail overlay. Lives in shadow roots: nothing here can leak into, or be broken by, Gmail's CSS. */
+
+:host { all: initial; }
+.ms-root { display: block; }
+.ms-root[data-verdict='danger'], .ms-v-danger { --v: var(--ms-danger); --v-soft: var(--ms-danger-soft); --v-line: var(--ms-danger-line); }
+.ms-root[data-verdict='caution'], .ms-v-caution { --v: var(--ms-caution); --v-soft: var(--ms-caution-soft); --v-line: var(--ms-caution-line); }
+.ms-root[data-verdict='safe'], .ms-v-safe { --v: var(--ms-safe); --v-soft: var(--ms-safe-soft); --v-line: var(--ms-safe-line); }
+.ms-root[data-verdict='scan'], .ms-root[data-verdict='error'] { --v: var(--ms-accent); --v-soft: var(--ms-accent-soft); --v-line: var(--ms-line-2); }
+
+/* ── Verdict banner ── */
+.ms-bn-wrap { margin: 6px 0 14px; max-width: 880px; animation: ms-fade-up var(--ms-dur-3) var(--ms-ease-out) both; }
+.ms-bn {
+  position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  padding: 10px 10px 10px 12px; border-radius: 16px; overflow: hidden;
+  background: linear-gradient(100deg, var(--v-soft) 0%, var(--ms-surface) 52%);
+  border: 1px solid var(--v-line); box-shadow: var(--ms-shadow-2);
+}
+.ms-bn::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 40%); }
+.ms-bn-icon { position: relative; width: 44px; height: 44px; display: grid; place-items: center; }
+.ms-bn-icon .ms-ping { position: absolute; inset: 4px; border-radius: 50%; border: 2px solid var(--v); animation: ms-ping 1.8s var(--ms-ease-out) infinite; }
+.ms-bn-text { min-width: 0; }
+.ms-bn-title { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 680; letter-spacing: -0.015em; color: var(--v); line-height: 1.25; }
+.ms-bn-title .ms-bn-brand { font-size: 11px; font-weight: 650; color: var(--ms-text-3); letter-spacing: 0.06em; text-transform: uppercase; }
+.ms-bn-sub { margin-top: 2px; font-size: 12.5px; color: var(--ms-text-2); line-height: 1.4; }
+.ms-bn-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.ms-bn-actions { display: flex; align-items: center; gap: 4px; align-self: start; }
+.ms-bn-scan { margin-top: 7px; width: min(260px, 100%); color: var(--ms-accent); }
+.ms-bn-more { margin-top: 8px; padding: 10px 12px; border-radius: 12px; background: var(--ms-surface); border: 1px solid var(--ms-line); display: flex; flex-direction: column; gap: 7px; animation: ms-fade-up var(--ms-dur-2) var(--ms-ease-out) both; }
+.ms-bn-more-item { display: grid; grid-template-columns: 18px 1fr; gap: 8px; font-size: 12.5px; color: var(--ms-text-2); }
+.ms-bn-more-item svg { width: 15px; height: 15px; margin-top: 2px; color: var(--ms-text-3); }
+.ms-bn-more-item[data-sev='critical'] svg, .ms-bn-more-item[data-sev='high'] svg { color: var(--ms-danger); }
+.ms-bn-more-item[data-sev='medium'] svg { color: var(--ms-caution); }
+.ms-bn-more-item[data-trust] svg { color: var(--ms-safe); }
+.ms-bn-more-item b { color: var(--ms-text); font-weight: 600; }
+
+/* Compact "looks safe" strip */
+.ms-bn--compact { grid-template-columns: auto 1fr auto; padding: 5px 6px 5px 10px; border-radius: 999px; gap: 10px; box-shadow: var(--ms-shadow-1); background: linear-gradient(100deg, var(--v-soft), var(--ms-surface) 60%); }
+.ms-bn--compact .ms-bn-title { font-size: 12.5px; font-weight: 640; }
+.ms-bn--compact .ms-bn-sub { margin: 0; font-size: 12px; }
+.ms-bn--compact .ms-bn-icon { width: 22px; height: 22px; }
+
+/* ── Dissector drawer ── */
+.ms-drawer-scrim { position: fixed; inset: 0; background: var(--ms-scrim); z-index: 2147482000; animation: ms-fade-in var(--ms-dur-2) var(--ms-ease) both; backdrop-filter: blur(1.5px); }
+.ms-drawer {
+  position: fixed; top: 10px; right: 10px; bottom: 10px; width: min(580px, calc(100vw - 20px)); z-index: 2147482001;
+  border-radius: 20px; overflow: hidden; border: 1px solid var(--ms-line-2); box-shadow: var(--ms-shadow-3);
+  animation: ms-slide-in-right var(--ms-dur-3) var(--ms-ease-out) both;
+}
+.ms-drawer[data-closing] { animation: ms-slide-out-right var(--ms-dur-2) var(--ms-ease) both; }
+.ms-drawer .ms-dx { height: 100%; }
+.ms-drawer .ms-dx-scroll { height: 100%; }
+
+/* ── Link guard ── */
+.ms-guard-scrim { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: center; padding: 20px; background: var(--ms-scrim); backdrop-filter: blur(4px); animation: ms-fade-in var(--ms-dur-2) both; }
+.ms-guard { width: min(460px, 100%); border-radius: 22px; background: var(--ms-surface); border: 1px solid var(--ms-danger-line); box-shadow: var(--ms-shadow-3); overflow: hidden; animation: ms-scale-in var(--ms-dur-3) var(--ms-spring) both; }
+.ms-guard-top { padding: 22px 22px 16px; background: radial-gradient(120% 100% at 0% 0%, var(--ms-danger-soft), transparent 60%); display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+.ms-guard-top h2 { margin: 0; font-size: 18px; font-weight: 680; letter-spacing: -0.02em; }
+.ms-guard-top p { margin: 3px 0 0; color: var(--ms-text-2); font-size: 13px; }
+.ms-guard-body { padding: 0 22px 18px; display: flex; flex-direction: column; gap: 10px; }
+.ms-guard-dest { padding: 11px 12px; border-radius: 12px; background: var(--ms-bg-2); border: 1px solid var(--ms-line); }
+.ms-guard-dest .ms-eyebrow { font-size: 10px; }
+.ms-guard-dest code { display: block; margin-top: 4px; font-family: var(--ms-mono); font-size: 12.5px; overflow-wrap: anywhere; color: var(--ms-text); }
+.ms-guard-dest code mark { background: none; color: var(--ms-danger); font-weight: 650; }
+.ms-guard-actions { display: flex; gap: 8px; justify-content: space-between; align-items: center; padding: 14px 22px 20px; border-top: 1px solid var(--ms-line); }
+
+/* ── Inbox radar badge ── */
+.ms-rb { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px 0 5px; margin-right: 6px; border-radius: 99px; font: 600 10.5px/1 var(--ms-font); letter-spacing: 0.01em; vertical-align: middle; border: 1px solid var(--v-line); background: var(--v-soft); color: var(--v); white-space: nowrap; animation: ms-scale-in var(--ms-dur-2) var(--ms-spring) both; cursor: default; }
+.ms-rb svg { width: 11px; height: 11px; }
+.ms-rb--scan { color: var(--ms-text-3); border-color: var(--ms-line-2); background: transparent; }
+.ms-rb--scan svg { animation: ms-spin 1.2s linear infinite; }
+
+/* ── Link hover card ── */
+.ms-hc { position: fixed; z-index: 2147482500; max-width: 380px; padding: 9px 11px; border-radius: 12px; background: var(--ms-surface); border: 1px solid var(--v-line); box-shadow: var(--ms-shadow-3); font-size: 12px; pointer-events: none; animation: ms-fade-up var(--ms-dur-1) var(--ms-ease-out) both; }
+.ms-hc b { display: flex; align-items: center; gap: 6px; color: var(--v); font-weight: 650; font-size: 12.5px; }
+.ms-hc code { display: block; margin-top: 4px; font-family: var(--ms-mono); font-size: 11.5px; color: var(--ms-text-2); overflow-wrap: anywhere; }

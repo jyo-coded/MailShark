@@ -32,8 +32,18 @@ function boundary(tag: string): string {
   return `----=_MS_${tag}_${counter.toString(16).padStart(6, '0')}`;
 }
 
+/** RFC 2047-encode non-ASCII header text the way real mail software does. */
+function encodeHeader(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  if (!/[^\x00-\x7f]/.test(value)) return value;
+  const addr = /^(.*?)(\s*<[^>]+>)$/.exec(value);
+  const text = addr ? (addr[1] as string).replace(/^"|"$/g, '') : value;
+  const word = `=?UTF-8?B?${Buffer.from(text, 'utf8').toString('base64')}?=`;
+  return addr ? `${word}${addr[2]}` : word;
+}
+
 export function buildEml(spec: FixtureSpec): string {
-  const lines: string[] = spec.headers.map(([k, v]) => `${k}: ${v}`);
+  const lines: string[] = spec.headers.map(([k, v]) => `${k}: ${encodeHeader(v)}`);
   lines.push('MIME-Version: 1.0');
 
   const bodyParts: string[] = [];

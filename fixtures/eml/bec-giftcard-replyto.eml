@@ -1,0 +1,23 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; dkim=pass header.i=@gmail.com header.s=20230601 header.b=abc; spf=pass (google.com: domain of ceo.acmecorp@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=ceo.acmecorp@gmail.com; dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+Return-Path: <bounce@google.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com; dkim=pass header.i=@gmail.com header.s=20230601 header.b=abc; spf=pass (google.com: domain of ceo.acmecorp@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=ceo.acmecorp@gmail.com; dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+From: Rahul Mehta <r.mehta@acme-corp.co>
+Reply-To: rahul.mehta.ceo@gmail.com
+To: finance@acmecorp.com
+Subject: Quick favor
+Date: Mon, 21 Sep 2026 15:48:59 +0000
+Message-ID: <CAxyz123@mail.gmail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+QXJlIHlvdSBhdCB5b3VyIGRlc2s/IEkgbmVlZCBhIHF1aWNrIGZhdm9yLiBJIGFtIGluIGEgbWVl
+dGluZyBhbmQgbmVlZCB5b3UgdG8gcHVyY2hhc2UgZ2lmdCBjYXJkcyBmb3IgYSBjbGllbnQuIEtl
+ZXAgdGhpcyBiZXR3ZWVuIHVzIGZvciBub3cuIFJlcGx5IHdpdGggeW91ciBjZWxsIG51bWJlciBh
+bmQgSSB3aWxsIHNlbmQgdGhlIGRldGFpbHMuCgpSYWh1bA==

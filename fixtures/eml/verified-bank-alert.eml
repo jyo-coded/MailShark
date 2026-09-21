@@ -1,0 +1,23 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; dkim=pass header.i=@hdfcbank.net header.s=hdfc header.b=abc; spf=pass (google.com: domain of alerts@hdfcbank.net designates 175.100.160.21 as permitted sender) smtp.mailfrom=alerts@hdfcbank.net; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=hdfcbank.net
+Return-Path: <bounce@hdfcbank.net>
+Received: from mailout.hdfcbank.net (mailout.hdfcbank.net. [175.100.160.21]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 175.100.160.21 as permitted sender) client-ip=175.100.160.21;
+Authentication-Results: mx.google.com; dkim=pass header.i=@hdfcbank.net header.s=hdfc header.b=abc; spf=pass (google.com: domain of alerts@hdfcbank.net designates 175.100.160.21 as permitted sender) smtp.mailfrom=alerts@hdfcbank.net; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=hdfcbank.net
+DKIM-Signature: v=1; a=rsa-sha256; d=hdfcbank.net; s=hdfc; h=from:to:subject:date; bh=x=; b=y=
+From: HDFC Bank InstaAlerts <alerts@hdfcbank.net>
+To: victim@gmail.com
+Subject: Transaction alert for your HDFC Bank Credit Card
+Date: Mon, 21 Sep 2026 15:48:59 +0000
+Message-ID: <1790005.123@hdfcbank.net>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+RGVhciBDdXN0b21lciwgUnMuMSwyNTAuMDAgd2FzIHNwZW50IG9uIHlvdXIgSERGQyBCYW5rIENy
+ZWRpdCBDYXJkIGVuZGluZyAxMjM0IGF0IEFNQVpPTiBvbiAyMS0wOS0yMDI2LiBJZiB5b3UgZGlk
+IG5vdCBtYWtlIHRoaXMgdHJhbnNhY3Rpb24sIGNhbGwgMTgwMDI1ODYxNjEuIE5ldmVyIHNoYXJl
+IHlvdXIgT1RQIG9yIFBJTiB3aXRoIGFueW9uZS4=

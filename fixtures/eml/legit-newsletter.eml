@@ -1,0 +1,42 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; dkim=pass header.i=@example-weekly.com header.s=s1 header.b=abc; spf=pass (google.com: domain of bounces+123@em.example-weekly.com designates 167.89.12.34 as permitted sender) smtp.mailfrom="bounces+123@em.example-weekly.com"; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=example-weekly.com
+Return-Path: <bounce@example-weekly.com>
+Received: from o1.ptr1234.news.example-weekly.com (o1.ptr1234.news.example-weekly.com. [167.89.12.34]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 167.89.12.34 as permitted sender) client-ip=167.89.12.34;
+Authentication-Results: mx.google.com; dkim=pass header.i=@example-weekly.com header.s=s1 header.b=abc; spf=pass (google.com: domain of bounces+123@em.example-weekly.com designates 167.89.12.34 as permitted sender) smtp.mailfrom="bounces+123@em.example-weekly.com"; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=example-weekly.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=example-weekly.com; h=content-type:from:mime-version:subject:list-unsubscribe:to; s=s1; bh=abc=; b=def=
+From: The Weekly Digest <digest@example-weekly.com>
+To: victim@gmail.com
+Subject: Your Monday reading list: 7 stories
+Date: Mon, 21 Sep 2026 15:48:59 +0000
+Message-ID: <abc123def456@geopod-ismtpd-3>
+List-Unsubscribe: <https://u123.ct.sendgrid.net/unsub?x=1>, <mailto:unsub@example-weekly.com>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+X-SG-EID: u001.abcdef
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="----=_MS_alt_000001"
+
+------=_MS_alt_000001
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+R29vZCBtb3JuaW5nISBIZXJlIGFyZSB0aGlzIHdlZWsncyBzdG9yaWVzLiBSZWFkIG9ubGluZSBh
+dCBodHRwczovL3d3dy5leGFtcGxlLXdlZWtseS5jb20vaXNzdWVzLzQxMiAuIFVuc3Vic2NyaWJl
+OiBodHRwczovL3UxMjMuY3Quc2VuZGdyaWQubmV0L3Vuc3ViP3g9MQ==
+------=_MS_alt_000001
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGJvZHk+PHRhYmxlIGNsYXNzPSJ3cmFwcGVyIj48dHI+PHRkIGNsYXNzPSJjb250ZW50
+Ij48aDE+WW91ciBNb25kYXkgcmVhZGluZyBsaXN0PC9oMT48cD5Hb29kIG1vcm5pbmchIEhlcmUg
+YXJlIHNldmVuIHN0b3JpZXMgd2UgbG92ZWQgdGhpcyB3ZWVrIGFib3V0IHNjaWVuY2UsIGRlc2ln
+biBhbmQgdGhlIHBlb3BsZSBiZWhpbmQgdGhlbS48L3A+PHA+PGEgaHJlZj0iaHR0cHM6Ly91MTIz
+LmN0LnNlbmRncmlkLm5ldC9scy9jbGljaz91cG49YWJjIj5SZWFkIHRoZSBpc3N1ZTwvYT48L3A+
+PHAgY2xhc3M9ImZvb3RlciI+PGEgaHJlZj0iaHR0cHM6Ly91MTIzLmN0LnNlbmRncmlkLm5ldC91
+bnN1Yj94PTEiPlVuc3Vic2NyaWJlPC9hPjwvcD48aW1nIHNyYz0iaHR0cHM6Ly91MTIzLmN0LnNl
+bmRncmlkLm5ldC93Zi9vcGVuP3Vwbj14eXoiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGFsdD0iIj48
+L3RkPjwvdHI+PC90YWJsZT48L2JvZHk+PC9odG1sPg==
+------=_MS_alt_000001--

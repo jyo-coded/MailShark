@@ -1,0 +1,22 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; dkim=pass header.i=@tradeco-intl.com header.s=selector1 header.b=abc; spf=pass (google.com: domain of billing@tradeco-intl.com designates 52.100.5.5 as permitted sender) smtp.mailfrom=billing@tradeco-intl.com; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=tradeco-intl.com
+Return-Path: <bounce@outlook.com>
+Received: from mail-eopbgr.outbound.protection.outlook.com (mail-eopbgr.outbound.protection.outlook.com. [52.100.5.5]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 52.100.5.5 as permitted sender) client-ip=52.100.5.5;
+Authentication-Results: mx.google.com; dkim=pass header.i=@tradeco-intl.com header.s=selector1 header.b=abc; spf=pass (google.com: domain of billing@tradeco-intl.com designates 52.100.5.5 as permitted sender) smtp.mailfrom=billing@tradeco-intl.com; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=tradeco-intl.com
+From: Billing <billing@tradeco-intl.com>
+To: victim@gmail.com
+Subject: RE: Updated bank details for payment
+Date: Mon, 21 Sep 2026 15:48:59 +0000
+Message-ID: <AM0PR01MB1234@tradeco-intl.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+SGksCgpBcyBkaXNjdXNzZWQsIHBsZWFzZSBub3RlIG91ciBuZXcgYmFuayBhY2NvdW50IGZvciBh
+bGwgZnV0dXJlIHBheW1lbnRzLiBLaW5kbHkgdXBkYXRlIHlvdXIgcmVjb3JkcyBhbmQgcHJvY2Vz
+cyB0aGUgcGVuZGluZyBwYXltZW50IHZpYSB3aXJlIHRyYW5zZmVyIHRvIHRoZSBJQkFOIGJlbG93
+LgoKSUJBTjogR0IzM0JVS0IyMDIwMTU1NTU1NTU1NQoKVGhhbmtz

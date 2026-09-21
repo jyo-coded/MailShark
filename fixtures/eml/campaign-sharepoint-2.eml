@@ -1,0 +1,27 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; spf=pass smtp.mailfrom=noreply@docs-review-center.net; dmarc=pass (p=NONE) header.from=docs-review-center.net
+Return-Path: <bounce@docs-review-center.net>
+Received: from mail1.docs-review-center.net (mail1.docs-review-center.net. [185.101.21.8]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 185.101.21.8 as permitted sender) client-ip=185.101.21.8;
+Authentication-Results: mx.google.com; spf=pass smtp.mailfrom=noreply@docs-review-center.net; dmarc=pass (p=NONE) header.from=docs-review-center.net
+From: SharePoint Online <noreply@docs-review-center.net>
+To: employee1@corp.example
+Subject: Employee1 shared "Q2 Salary Adjustment 2027.pdf" with you
+Date: Mon, 11 Sep 2026 01:15:00 +0000
+Message-ID: <1001.7919@docs-review-center.net>
+X-Mailer: Microsoft Outlook 16.0
+MIME-Version: 1.0
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PHRhYmxlIGNsYXNzPSJtcy1jYXJkIj48dHI+PHRkIGNsYXNzPSJoZHIiPjxpbWcgc3JjPSJodHRw
+czovL2Nkbi5kb2NzLXJldmlldy1jZW50ZXIubmV0L2xvZ28ucG5nIj48L3RkPjwvdHI+PHRyPjx0
+ZCBjbGFzcz0iYm9keSI+PHA+RW1wbG95ZWUxIGhhcyBzaGFyZWQgYSBkb2N1bWVudCB3aXRoIHlv
+dS48L3A+PHA+UTIgU2FsYXJ5IEFkanVzdG1lbnQuIFBsZWFzZSByZXZpZXcgZG9jdW1lbnQgYW5k
+IHNpZ24gaW4gd2l0aCB5b3VyIGNvcnBvcmF0ZSBjcmVkZW50aWFscyB0byB2aWV3IHRoZSBmaWxl
+IGJlZm9yZSBpdCBleHBpcmVzIHRvZGF5LjwvcD48cD48YSBjbGFzcz0iYnRuIiBocmVmPSJodHRw
+czovL3ZpZXcuZG9jcy1yZXZpZXctY2VudGVyLm5ldC9zLzE3d2RycXB4OWsyL29wZW4iPk9wZW4g
+ZG9jdW1lbnQ8L2E+PC9wPjwvdGQ+PC90cj48L3RhYmxlPg==

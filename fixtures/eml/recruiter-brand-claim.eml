@@ -1,0 +1,30 @@
+Delivered-To: victim@gmail.com
+Received: by 2002:a05:612c:2c92:b0:605:d55e:8f60 with SMTP id iu18csp12415996vqb; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+X-Received: by 2002:a05:6214:1c8e:b0:6a1:8f44 with SMTP id xyz; Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1790005745; cv=none; d=google.com; s=arc-20240605; b=abc
+ARC-Authentication-Results: i=1; mx.google.com; dkim=pass header.i=@hiring.talentsjobs.in header.s=mc header.b=abc; dkim=pass header.i=@mailercloud.com header.s=mc1 header.b=def; spf=pass (google.com: domain of bounce.cli26174-1634010-1634010@mlrctk.com designates 103.197.16.155 as permitted sender) smtp.mailfrom=bounce.cli26174-1634010-1634010@mlrctk.com; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hiring.talentsjobs.in
+Return-Path: <bounce.cli26174-1634010-1634010-2428252109-2056-3@mlrctk.com>
+Received: from mail.cb1155.mlrctk.com (mail.cb1155.mlrctk.com. [103.197.16.155]) by mx.google.com with ESMTPS id 6a1803df08f44-91260be7b36si82348806d6.70.2026.09.21.08.49.05 for <victim@gmail.com> (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256); Mon, 21 Sep 2026 08:49:05 -0700 (PDT)
+Received-SPF: pass (google.com: domain designates 103.197.16.155 as permitted sender) client-ip=103.197.16.155;
+Authentication-Results: mx.google.com; dkim=pass header.i=@hiring.talentsjobs.in header.s=mc header.b=abc; dkim=pass header.i=@mailercloud.com header.s=mc1 header.b=def; spf=pass (google.com: domain of bounce.cli26174-1634010-1634010@mlrctk.com designates 103.197.16.155 as permitted sender) smtp.mailfrom=bounce.cli26174-1634010-1634010@mlrctk.com; dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=hiring.talentsjobs.in
+DKIM-Signature: v=1; a=rsa-sha256; d=hiring.talentsjobs.in; s=mc; h=from:to:subject; bh=x=; b=y=
+DKIM-Signature: v=1; a=rsa-sha256; d=mailercloud.com; s=mc1; h=from:to:subject; bh=x=; b=y=
+From: "Mind Tree Placement Team" <noreply@hiring.talentsjobs.in>
+Reply-To: noreply@hiring.talentsjobs.in
+To: victim@gmail.com
+Subject: =?UTF-8?B?TFRJIE1pbmQgVHJlZSBIaXJpbmcgMjAyNyDigJMgRnJvbnRlbmQgRGV2ZWxvcGVyLCBTb2Z0d2FyZSBFbmdpbmVlciB8IFN0aXBlbmQgVXAgdG8g4oK5NDBL?=
+Date: Mon, 21 Sep 2026 15:48:59 +0000
+Message-ID: <1790005743-MjQyODI1MjEwOS0xNjM0MDEw@hiring.talentsjobs.in>
+X-Mailer: mailercloud
+List-Unsubscribe: <https://hiring.talentsjobs.in/un/cWbxEMSfsbsMkgUea>
+MIME-Version: 1.0
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PHA+RGVhciBTdHVkZW50LDwvcD48cD5XZSBhcmUgcGxlYXNlZCB0byBpbmZvcm0geW91IGFib3V0
+IGFuIGV4Y2l0aW5nIE1pbmQgVFJFRSBKb2JzIGFuZCBJbnRlcm5zaGlwIEhpcmluZyBEcml2ZSBm
+b3IgZWxpZ2libGUgc3R1ZGVudHMgZnJvbSB5b3VyIGluc3RpdHV0aW9uLjwvcD48cD48YSBocmVm
+PSJodHRwczovL2hpcmluZy50YWxlbnRzam9icy5pbi9saW5rcy9jV2J4RU1TZnNic01rZ1VlYVpN
+QndEZWFCYXFDYUZXTVZYaGNhTURhZWEvNDEwMTE4OCI+QVBQTFkgTk9XPC9hPjwvcD48aW1nIHNy
+Yz0iaHR0cHM6Ly9oaXJpbmcudGFsZW50c2pvYnMuaW4vb3BlbnMvY1dieEVNU2ZzYnNNa2cvYmxh
+bmsuZ2lmIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIj4=
