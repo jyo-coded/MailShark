@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Verdict } from '../../../../engine/src/types';
-import { send, type ReportSummary } from '../../shared/protocol';
+import { send, sendOr, type ReportSummary } from '../../shared/protocol';
 import { plural } from '../../shared/format';
 import { Empty, Segmented, download } from '../../ui/primitives';
 import { SharkMark } from '../../ui/SharkMark';
@@ -16,7 +16,7 @@ export function HistoryPage({ ctx }: { ctx: LabContext }) {
   const [page, setPage] = useState(0);
   const [data, setData] = useState<{ items: ReportSummary[]; total: number } | null>(null);
   useEffect(() => {
-    const t = setTimeout(() => void send({ kind: 'history', limit: PAGE, offset: page * PAGE, verdict, query }).then(setData), query ? 180 : 0);
+    const t = setTimeout(() => void sendOr({ kind: 'history', limit: PAGE, offset: page * PAGE, verdict, query }, { items: [], total: 0 }).then(setData), query ? 180 : 0);
     return () => clearTimeout(t);
   }, [verdict, query, page]);
   useEffect(() => setPage(0), [verdict, query]);

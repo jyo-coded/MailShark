@@ -139,6 +139,16 @@ export async function send<R extends Request>(req: R): Promise<Response<R['kind'
   return (await ext.runtime.sendMessage(req)) as Response<R['kind']>;
 }
 
+/** Like send(), but a failed request resolves to `fallback`, so a view shows its empty state instead of loading forever. */
+export async function sendOr<R extends Request>(req: R, fallback: Response<R['kind']>): Promise<Response<R['kind']>> {
+  try {
+    return await send(req);
+  } catch (e) {
+    console.warn(`[MailShark] ${req.kind} failed:`, e);
+    return fallback;
+  }
+}
+
 // Messages from the popup to the Gmail tab.
 export type TabRequest = { kind: 'tab:openDissector' } | { kind: 'tab:active' };
 

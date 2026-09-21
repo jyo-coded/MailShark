@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { send, type CampaignRecord, type ReportSummary } from '../../shared/protocol';
+import { sendOr, type CampaignRecord, type ReportSummary } from '../../shared/protocol';
 import { plural, relativeTime } from '../../shared/format';
 import { Chip, Empty, Segmented, VerdictIcon } from '../../ui/primitives';
 import { SharkMark } from '../../ui/SharkMark';
@@ -38,7 +38,7 @@ export function CampaignCard({ c }: { c: CampaignRecord }) {
 function Detail({ id, ctx }: { id: string; ctx: LabContext }) {
   const [data, setData] = useState<{ campaign: CampaignRecord; members: ReportSummary[] } | null | undefined>(undefined);
   useEffect(() => {
-    void send({ kind: 'campaign', id }).then(setData);
+    void sendOr({ kind: 'campaign', id }, null).then(setData);
   }, [id]);
   if (data === undefined) return <div class="ms-skeleton" style={{ height: '420px' }} />;
   if (data === null)
@@ -90,7 +90,7 @@ export function CampaignsPage({ ctx, selected }: { ctx: LabContext; selected: st
   const [list, setList] = useState<CampaignRecord[] | null>(null);
   const [filter, setFilter] = useState<'threats' | 'all' | 'bulk'>('threats');
   useEffect(() => {
-    if (!selected) void send({ kind: 'campaigns' }).then(setList);
+    if (!selected) void sendOr({ kind: 'campaigns' }, []).then(setList);
   }, [selected]);
   if (selected) return <Detail id={selected} ctx={ctx} />;
   const shown = (list ?? []).filter((c) => (filter === 'all' ? true : filter === 'threats' ? c.verdict !== 'safe' : c.verdict === 'safe'));

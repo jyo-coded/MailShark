@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks';
-import { send, type CampaignRecord, type ReportSummary } from '../../shared/protocol';
+import { sendOr, type CampaignRecord, type ReportSummary } from '../../shared/protocol';
 import { formatDateTime, plural } from '../../shared/format';
 import { brandById } from '../../../../engine/src/data/brands';
 import { Empty } from '../../ui/primitives';
@@ -17,12 +17,13 @@ export function OverviewPage({ ctx }: { ctx: LabContext }) {
   const [campaigns, setCampaigns] = useState<CampaignRecord[] | null>(null);
   useEffect(() => {
     ctx.refreshStats();
-    void send({ kind: 'history', limit: 6, offset: 0, verdict: 'danger' }).then(async (d) => {
-      const c = await send({ kind: 'history', limit: 6, offset: 0, verdict: 'caution' });
+    const none = { items: [], total: 0 };
+    void sendOr({ kind: 'history', limit: 6, offset: 0, verdict: 'danger' }, none).then(async (d) => {
+      const c = await sendOr({ kind: 'history', limit: 6, offset: 0, verdict: 'caution' }, none);
       setThreats([...d.items, ...c.items].sort((a, b) => b.storedAt - a.storedAt).slice(0, 7));
     });
-    void send({ kind: 'history', limit: 6, offset: 0 }).then((d) => setRecent(d.items));
-    void send({ kind: 'campaigns' }).then((c) => setCampaigns(c.slice(0, 3)));
+    void sendOr({ kind: 'history', limit: 6, offset: 0 }, none).then((d) => setRecent(d.items));
+    void sendOr({ kind: 'campaigns' }, []).then((c) => setCampaigns(c.slice(0, 3)));
   }, []);
 
   const hour = new Date().getHours();

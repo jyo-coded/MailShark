@@ -1,7 +1,7 @@
 // Background event page: hosts the engine, the evidence store and the threat feeds.
 import { ext } from '../shared/ext';
 import { loadSettings, onSettingsChanged } from '../shared/settings';
-import type { Request, ReportSummary, Stats } from '../shared/protocol';
+import type { Request, ReportSummary, Stats, StoredReport } from '../shared/protocol';
 import { db, wipe } from './db';
 import { analyzeAndStore, summaryOf } from './pipeline';
 import { feedStatus, invalidateIntel, refreshFeeds } from './feeds';
@@ -58,8 +58,10 @@ async function stats(): Promise<Stats> {
 async function history(limit: number, offset: number, verdict: string | undefined, query: string | undefined): Promise<{ items: ReportSummary[]; total: number }> {
   const d = await db();
   const q = (query ?? '').trim().toLowerCase();
-  const items: ReportSummary[] = [];
+  const page: StoredReport[] = [];
   let total = 0;
+  // Collect first, summarise after: awaiting another transaction inside the cursor loop would let
+  // this one auto-commit and the next continue() would throw.
   let cursor = await d.transaction('reports').store.index('storedAt').openCursor(null, 'prev');
   while (cursor) {
     const r = cursor.value;
@@ -71,12 +73,12 @@ async function history(limit: number, offset: number, verdict: string | undefine
       (r.report.summary.from?.name ?? '').toLowerCase().includes(q) ||
       (r.meta.fileName ?? '').toLowerCase().includes(q);
     if (okVerdict && okQuery) {
-      if (total >= offset && items.length < limit) items.push(await summaryOf(r));
+      if (total >= offset && page.length < limit) page.push(r);
       total++;
     }
     cursor = await cursor.continue();
   }
-  return { items, total };
+  return { items: await Promise.all(page.map(summaryOf)), total };
 }
 
 async function handle(msg: Request): Promise<unknown> {
