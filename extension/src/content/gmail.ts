@@ -66,6 +66,21 @@ export function isInsideMessageBody(node: Element): HTMLElement | null {
 export class GmailFetchError extends Error {}
 
 /**
+ * Read a Blob as a binary (Latin-1) string: one char per byte, lossless.
+ * In Firefox, content-script fetch() runs in the page's context, so its ArrayBuffers belong to the
+ * page compartment and typed-array views over them throw "Permission denied". Strings cross that
+ * boundary safely, so the bytes are read through FileReader instead.
+ */
+function binaryString(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(new GmailFetchError('Could not read the message from Gmail'));
+    reader.readAsBinaryString(blob);
+  });
+}
+
+/**
  * Fetch the original RFC 822 message: the same endpoint as Gmail's own "Download message".
  * Runs in the page's origin with the user's session; the bytes stay in memory.
  */
@@ -79,11 +94,8 @@ export async function fetchRaw(id: string, signal?: AbortSignal): Promise<string
     throw new GmailFetchError(e instanceof Error && e.name === 'AbortError' ? 'Cancelled' : 'Could not reach Gmail');
   }
   if (!res.ok) throw new GmailFetchError(`Gmail refused the request (HTTP ${res.status})`);
-  const buf = new Uint8Array(await res.arrayBuffer());
-  if (buf.length === 0) throw new GmailFetchError('Gmail returned an empty message');
-  let raw = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < buf.length; i += CHUNK) raw += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + CHUNK)));
+  const raw = await binaryString(await res.blob());
+  if (raw.length === 0) throw new GmailFetchError('Gmail returned an empty message');
   const head = raw.slice(0, 4096);
   if (/^\s*<(!doctype|html)/i.test(head) || !/^[A-Za-z][A-Za-z0-9-]*:/m.test(head) || !/^(from|received|date|message-id|subject|return-path|delivered-to|mime-version):/im.test(head)) {
     throw new GmailFetchError('Gmail did not return the original message');

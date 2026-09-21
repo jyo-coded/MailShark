@@ -52,12 +52,22 @@ export function copyStatic(out) {
   writeFileSync(join(out, 'app.css'), css);
 }
 
-export async function buildExtension({ target = 'firefox', out, dev = false, watch = false, preview = false }) {
+export async function buildExtension({ target = 'firefox', out, dev = false, watch = false, preview = false, testOrigin = null }) {
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
   copyStatic(out);
-  writeFileSync(join(out, 'manifest.json'), JSON.stringify(buildManifest({ version: pkg.version, target }), null, 2) + '\n');
+  const manifest = buildManifest({ version: pkg.version, target });
+  if (testOrigin) {
+    // End-to-end test builds only: also run on the local Gmail mock. Never used for releases.
+    // Match patterns cannot carry a port, so the pattern covers the host on any port.
+    const u = new URL(testOrigin);
+    const pattern = `${u.protocol}//${u.hostname}/*`;
+    manifest.host_permissions.push(pattern);
+    manifest.content_scripts[0].matches.push(pattern);
+    manifest.web_accessible_resources[0].matches.push(pattern);
+  }
+  writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 
   const common = {
     plugins: [noInnerHtml],
@@ -69,6 +79,8 @@ export async function buildExtension({ target = 'firefox', out, dev = false, wat
     jsxImportSource: 'preact',
     loader: { '.css': 'text' },
     minify: false,
+    // Dead-code elimination only (e.g. test-only branches); identifiers and layout stay readable.
+    minifySyntax: !dev,
     sourcemap: dev ? 'inline' : false,
     legalComments: 'eof',
     charset: 'utf8',
@@ -78,7 +90,7 @@ export async function buildExtension({ target = 'firefox', out, dev = false, wat
       __MS_VERSION__: JSON.stringify(pkg.version),
       __MS_TARGET__: JSON.stringify(target),
       __MS_DEV__: JSON.stringify(dev),
-      __MS_PREVIEW__: JSON.stringify(preview),
+      __MS_PREVIEW__: JSON.stringify(preview || !!testOrigin),
     },
   };
   const options = ENTRIES.map((e) => ({ ...common, entryPoints: { [e.out]: e.in }, outdir: out }));

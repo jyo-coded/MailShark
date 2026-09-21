@@ -289,6 +289,7 @@ function onLinkClick(e: MouseEvent): void {
   const a = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
   if (!a) return;
   const link = guardLinkFor(a);
+  if (__MS_PREVIEW__) document.documentElement.setAttribute('data-mailshark-e2e-click', link ? `match:${link.risk}` : 'nomatch');
   if (!link || !isDangerous(link)) return;
   e.preventDefault();
   e.stopImmediatePropagation();
@@ -466,9 +467,16 @@ ext.runtime.onMessage.addListener((msg: unknown) => {
 
 // ── Boot ────────────────────────────────────────────────────────────────────
 
+/** Test builds only: expose the boot stage to end-to-end tests (compiled out of releases). */
+function stage(s: string): void {
+  if (__MS_PREVIEW__) document.documentElement.setAttribute('data-mailshark-e2e', s);
+}
+
 async function boot(): Promise<void> {
   if (location.hostname !== 'mail.google.com' && !__MS_PREVIEW__) return;
+  stage('start');
   settings = await loadSettings();
+  stage('settings');
   injectFonts();
   onSettingsChanged((s) => {
     const themeChanged = s.overlayTheme !== settings.overlayTheme;
@@ -486,6 +494,7 @@ async function boot(): Promise<void> {
     if (!document.hidden) schedule();
   });
   scan();
+  stage('ready');
 }
 
-void boot();
+boot().catch((e: unknown) => stage(`error:${e instanceof Error ? e.message : String(e)}`));

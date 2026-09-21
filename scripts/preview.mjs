@@ -34,7 +34,7 @@ function decodeBodies(raw) {
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-function gmailPage() {
+function gmailPage(real = false) {
   const data = JSON.stringify(rows.map((r) => ({ id: r.id, subject: r.subject, name: r.name, from: r.from, link: r.link })));
   return `<!doctype html><html><head><meta charset="utf-8"><title>Inbox – Gmail (MailShark preview)</title>
 <style>
@@ -71,7 +71,7 @@ function open(id){
 const q = new URLSearchParams(location.search).get('open');
 if (q) open(q); else list();
 </script>
-<script src="/preview-shim.js"></script><script src="/background.js"></script><script src="/content.js"></script>
+${real ? '' : '<script src="/preview-shim.js"></script><script src="/background.js"></script><script src="/content.js"></script>'}
 </body></html>`;
 }
 
@@ -97,7 +97,8 @@ http
         return res.end(Buffer.from(raw, 'latin1'));
       }
       res.writeHead(200, { 'content-type': TYPES['.html'] });
-      return res.end(gmailPage());
+      // ?real=1 serves the bare mock so a real installed extension (not the in-page shim) drives it.
+      return res.end(gmailPage(url.searchParams.get('real') === '1'));
     }
     if (url.pathname === '/' || url.pathname === '/index.html') {
       res.writeHead(200, { 'content-type': TYPES['.html'] });
