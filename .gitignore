@@ -10,7 +10,7 @@ web-ext-artifacts/
 
 # Python lab
 lab/.venv/
-lab/**/__pycache__/
+__pycache__/
 lab/*.egg-info/
 lab/data/
 lab/out/

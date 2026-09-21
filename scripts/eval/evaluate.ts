@@ -5,6 +5,7 @@
 import { createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { analyzeEmail } from '../../engine/src/analyze';
+import { BloomFilter, BloomIntel } from '../../engine/src/intel/bloom';
 
 interface Sample {
   dataset: string;
@@ -18,6 +19,13 @@ const args = process.argv.slice(2);
 const limit = Number(args[args.indexOf('--limit') + 1] || 0) || Infinity;
 const outPath = args.includes('--out') ? (args[args.indexOf('--out') + 1] as string) : 'lab/out/engine-eval.jsonl';
 const root = process.cwd();
+const intelDir = args.includes('--intel') ? (args[args.indexOf('--intel') + 1] as string) : null;
+const only = args.includes('--only') ? (args[args.indexOf('--only') + 1] as string) : null;
+function loadIntel(): BloomIntel | null {
+  if (!intelDir) return null;
+  const man = JSON.parse(readFileSync(join(intelDir, 'manifest.json'), 'utf8')) as { lists: { name: string; file: string; m: number; k: number; count: number }[] };
+  return new BloomIntel(man.lists.map((l) => new BloomFilter({ name: l.name, m: l.m, k: l.k, count: l.count }, new Uint8Array(readFileSync(join(intelDir, l.file))))));
+}
 let blocked = 0;
 
 function* mbox(path: string): Generator<Uint8Array> {
@@ -86,12 +94,14 @@ async function main(): Promise<void> {
   const fnReasons = new Map<string, number>();
   let n = 0;
   const t0 = Date.now();
+  const intel = loadIntel();
   for (const s of samples()) {
+    if (only && s.dataset !== only) continue;
     const key = `${s.dataset}/${s.group}`;
     const a = agg.get(key) ?? { n: 0, danger: 0, caution: 0, safe: 0, errors: 0 };
     a.n++;
     try {
-      const r = await analyzeEmail(s.raw, { now: new Date('2026-09-21T00:00:00Z') });
+      const r = await analyzeEmail(s.raw, { now: new Date('2026-09-21T00:00:00Z'), intel });
       a[r.verdict]++;
       const positives = r.findings.filter((f) => f.weight > 0).map((f) => f.id.replace(/:.*$/, ''));
       if (s.label === 'ham' && r.verdict !== 'safe') for (const id of positives) fpFindings.set(id, (fpFindings.get(id) ?? 0) + 1);
