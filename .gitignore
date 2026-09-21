@@ -20,3 +20,5 @@ lab/out/
 datasets/
 *.mbox
 !engine/test/fixtures/**/*.mbox
+lab/out/
+lab/build/
