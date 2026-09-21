@@ -182,6 +182,7 @@ function renderOverlay(): void {
   const host = ensureOverlay();
   host.root.setAttribute('data-theme', themeFor());
   const d = overlay.drawer;
+  if (__MS_PREVIEW__) document.documentElement.setAttribute('data-mailshark-e2e-drawer', !d ? 'closed' : 'loading' in d ? 'loading' : 'open');
   render(
     <>
       {d && (
@@ -356,6 +357,10 @@ function refreshRadarBadges(): void {
       badgeHosts.set(row, host);
     }
     render(<Badge entry={entry} />, host.root);
+  }
+  if (__MS_PREVIEW__) {
+    const pending = [...radar.values()].filter((e) => e.status === 'queued' || e.status === 'scan').length;
+    document.documentElement.setAttribute('data-mailshark-e2e-radar', String(pending));
   }
 }
 
