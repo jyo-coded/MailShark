@@ -19,12 +19,13 @@ export function SharkMark({ size = 28, state = 'idle', badge = true, still = fal
           <stop offset="0" stop-color="#f2fdff" />
           <stop offset="1" stop-color="#a5f3f0" />
         </linearGradient>
+        {/* The wave is wider than the mark (it scrolls), so both variants clip to the tile. */}
         <clipPath id={`${id}clip`}>
-          <rect x="0" y="0" width="64" height="64" rx="16" />
+          <rect x="0" y="0" width="64" height="64" rx={badge ? 16 : 0} />
         </clipPath>
       </defs>
       {badge && <rect x="0" y="0" width="64" height="64" rx="16" fill={`url(#${id}bg)`} />}
-      <g clip-path={badge ? `url(#${id}clip)` : undefined}>
+      <g clip-path={`url(#${id}clip)`}>
         <g class="ms-shark-wave">
           <path
             d="M0 50 q8 -5 16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0 t16 0"

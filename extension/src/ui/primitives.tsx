@@ -56,13 +56,37 @@ export interface TabDef<T extends string> {
 export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: TabDef<T>[]; value: T; onChange: (t: T) => void }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [ink, setInk] = useState<{ x: number; w: number }>({ x: 0, w: 0 });
+  // When the tabs overflow (narrow drawer), fade the clipped edge(s) so hidden tabs are discoverable.
+  const [fade, setFade] = useState({ l: false, r: false });
+  const measure = (): void => {
+    const w = wrap.current;
+    if (!w) return;
+    const l = w.scrollLeft > 2;
+    const r = w.scrollLeft + w.clientWidth < w.scrollWidth - 2;
+    setFade((f) => (f.l === l && f.r === r ? f : { l, r }));
+  };
   useLayoutEffect(() => {
     const el = wrap.current?.querySelector<HTMLElement>(`[data-tab="${value}"]`);
     if (el) {
       setInk({ x: el.offsetLeft + 8, w: Math.max(0, el.offsetWidth - 16) });
       el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
+    measure();
   }, [value, tabs.length]);
+  useEffect(() => {
+    const w = wrap.current;
+    if (!w || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(w);
+    return () => ro.disconnect();
+  }, []);
+  // A vertical mouse wheel scrolls the tab strip sideways when it overflows.
+  const onWheel = (e: JSX.TargetedWheelEvent<HTMLDivElement>): void => {
+    const w = e.currentTarget;
+    if (w.scrollWidth <= w.clientWidth || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    e.preventDefault();
+    w.scrollLeft += e.deltaY * (e.deltaMode === 1 ? 16 : 1);
+  };
   const onKey = (e: JSX.TargetedKeyboardEvent<HTMLDivElement>): void => {
     const i = tabs.findIndex((t) => t.id === value);
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
@@ -72,7 +96,7 @@ export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: TabDef
     }
   };
   return (
-    <div class="ms-tabs" role="tablist" ref={wrap} onKeyDown={onKey}>
+    <div class="ms-tabs" role="tablist" ref={wrap} onKeyDown={onKey} onScroll={measure} onWheel={onWheel} data-fade-l={fade.l ? '' : undefined} data-fade-r={fade.r ? '' : undefined}>
       {tabs.map((t) => (
         <button type="button" class="ms-tab" role="tab" data-tab={t.id} aria-selected={t.id === value} tabIndex={t.id === value ? 0 : -1} onClick={() => onChange(t.id)}>
           {t.icon}
