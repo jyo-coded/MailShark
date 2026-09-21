@@ -1,10 +1,11 @@
 // Sender identity: who the message claims to be from vs. who provably sent it.
 import { addressParser } from 'postal-mime';
 import type { AddressInfo, AuthAnalysis, SenderAnalysis } from '../types';
-import { findBrands, isBrandDomain, type Brand } from '../data/brands';
+import { findBrands, findBrandsInName, isBrandDomain, type Brand } from '../data/brands';
 import { domainOfAddress, isFreemail, orgDomain } from '../util/domain';
 import { decodeHeaderValue } from '../mime/raw';
 import { detectLookalike } from './lookalike';
+import { ROLE_NAMES } from '../data/lexicon';
 
 export function toAddressInfo(name: string, address: string): AddressInfo {
   const addr = address.trim().toLowerCase();
@@ -33,6 +34,23 @@ export interface SenderInputs {
   auth: AuthAnalysis;
   subject: string;
   senderSeenCount: number | null | undefined;
+  recipient: AddressInfo | null;
+}
+
+const PROVIDER_ORGS = new Set(['google.com', 'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'live.com', 'microsoft.com', 'yahoo.com', 'icloud.com', 'apple.com', 'proton.me', 'protonmail.com', 'zoho.com', 'aol.com']);
+
+/** Does the sender borrow the recipient's own organisation name while mailing from outside it? */
+function recipientOrgLure(fromName: string, subject: string, from: AddressInfo | null, recipient: AddressInfo | null): string | null {
+  if (!recipient?.orgDomain || !from) return null;
+  const org = recipient.orgDomain;
+  if (from.orgDomain === org || from.domain.endsWith('.' + org)) return null;
+  const hay = `${fromName} ${subject}`.toLowerCase();
+  if (hay.includes(org)) return org;
+  // Company recipients: the bare organisation label ("monkey" for monkey.org) is also a tell.
+  const label = org.split('.')[0] ?? '';
+  const labelRe = new RegExp(`(^|[^a-z0-9])${label.replace(/[^a-z0-9-]/g, '')}([^a-z0-9]|$)`);
+  if (!isFreemail(org) && !PROVIDER_ORGS.has(org) && label.length >= 4 && (labelRe.test(fromName.toLowerCase()) || labelRe.test(subject.toLowerCase()))) return org;
+  return null;
 }
 
 export function analyzeSender(input: SenderInputs): SenderAnalysis & { claimed: Brand[] } {
@@ -52,6 +70,7 @@ export function analyzeSender(input: SenderInputs): SenderAnalysis & { claimed: 
   // in the subject/body are weighed later together with the message's intent.
   const claimSource = [from?.name ?? '', from ? from.address.split('@')[0]?.replace(/[._-]+/g, ' ') ?? '' : '', displayNameAddress ?? ''].join(' ');
   const claimed = findBrands(claimSource, true);
+  for (const b of findBrandsInName(from?.name ?? '')) if (!claimed.includes(b)) claimed.push(b);
 
   const freemail = from ? isFreemail(from.domain) : false;
   const dkimOrgs = input.auth.dkimDomains.map((d) => orgDomain(d));
@@ -82,6 +101,7 @@ export function analyzeSender(input: SenderInputs): SenderAnalysis & { claimed: 
   }
 
   const lookalike = from ? detectLookalike(from.domain) : null;
+  const role = from?.name ? (ROLE_NAMES.exec(from.name)?.[0] ?? null) : null;
 
   return {
     from,
@@ -93,8 +113,11 @@ export function analyzeSender(input: SenderInputs): SenderAnalysis & { claimed: 
     impersonatedBrand,
     verifiedBrand,
     lookalikeOf: lookalike ? `${lookalike.brand.name} (${lookalike.target})` : null,
+    lookalikeKind: lookalike?.kind ?? null,
     displayNameAddress,
     firstTimeSender: input.senderSeenCount == null ? null : input.senderSeenCount === 0,
+    impersonatesRecipientOrg: recipientOrgLure(from?.name ?? '', input.subject, from, input.recipient),
+    roleName: role && from && !(input.recipient && from.orgDomain === input.recipient.orgDomain) ? role : null,
     claimed,
   };
 }

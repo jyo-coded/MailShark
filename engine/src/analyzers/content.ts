@@ -2,11 +2,12 @@
 // explainable by design: every conclusion carries the phrases that triggered it.
 import type { ContentAnalysis } from '../types';
 import { ATTACHMENT_INSTRUCTIONS, EN_STOPWORDS, GENERIC_GREETINGS, INTENTS, URGENCY } from '../data/lexicon';
-import { findBrands } from '../data/brands';
-import { collapseWs, normalizeForMatching, scriptsOf, templatize, tokenize, truncate } from '../util/text';
+import { findBrands, findBrandsCollapsed } from '../data/brands';
+import { collapseWs, hasMixedScriptWord, normalizeForMatching, scriptsOf, templatize, tokenize, truncate } from '../util/text';
 
 function phraseRe(p: string): RegExp {
-  const esc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  // Phrases get the same normalization as the text (accents folded), so "contraseña" matches.
+  const esc = normalizeForMatching(p).replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
   return new RegExp(`(?:^|[^\\p{L}\\p{N}])${esc}(?=$|[^\\p{L}\\p{N}])`, 'u');
 }
 
@@ -15,7 +16,13 @@ const COMPILED_URGENCY = URGENCY.map(([p, w]) => ({ p, w, re: phraseRe(p) }));
 const COMPILED_ATTACH = ATTACHMENT_INSTRUCTIONS.map(([p, w]) => ({ p, w, re: phraseRe(p) }));
 const COMPILED_GREETINGS = GENERIC_GREETINGS.map((g) => phraseRe(g));
 
-const PHONE_RE = /(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)[\s.-]?)?\d{3,5}[\s.-]\d{3,4}[\s.-]?\d{0,4}/g;
+// Legitimate short words in common languages, excluded from the split-word fragment count.
+const SHORT_WORDS = new Set([
+  'a', 'i', 'to', 'of', 'in', 'on', 'is', 'it', 'at', 'be', 'by', 'or', 'as', 'an', 'we', 'my', 'me', 'no', 'so', 'up', 'do', 'go', 'he', 'us', 'if', 'am', 'pm',
+  'de', 'la', 'el', 'en', 'y', 'e', 'o', 'da', 'do', 'em', 'um', 'se', 'lo', 'le', 'du', 'et', 'il', 'di', 'un', 'zu', 'im', 'es', 'er', 'ab', 'ok', 'tv', 'id',
+]);
+
+const PHONE_RE =/(?:\+\d{1,3}[\s.-]?)?(?:\(\d{2,4}\)[\s.-]?)?\d{3,5}[\s.-]\d{3,4}[\s.-]?\d{0,4}/g;
 
 export interface ContentInputs {
   subject: string;
@@ -24,13 +31,16 @@ export interface ContentInputs {
   references: string | null;
   hasLinks: boolean;
   hasAttachments: boolean;
+  fromName?: string;
+  recipient?: string | null;
 }
 
 export function analyzeContent(input: ContentInputs): ContentAnalysis {
   const subject = input.subject ?? '';
   const bodyNorm = normalizeForMatching(input.text.slice(0, 60_000));
   const subjNorm = normalizeForMatching(subject);
-  const all = `${subjNorm}\n${bodyNorm}`;
+  // The sender's display name is part of the pitch ("Email Account Administrator").
+  const all = `${subjNorm}\n${normalizeForMatching(input.fromName ?? '')}\n${bodyNorm}`;
 
   const intents = COMPILED_INTENTS.map((def) => {
     const matches: string[] = [];
@@ -69,7 +79,13 @@ export function analyzeContent(input: ContentInputs): ContentAnalysis {
   }
   if (phones.size && intents.some((i) => i.id === 'callback')) actions.add('call a phone number');
 
-  const brandMentions = findBrands(`${subject}\n${input.text.slice(0, 20_000)}`, false).map((b) => b.id);
+  // Split-word obfuscation: an unusual share of 1–2 letter fragments ("Lin ked i n Busi ne ss").
+  const alpha = (input.text.slice(0, 4000).match(/\p{L}+/gu) ?? []).map((t) => t.toLowerCase());
+  const fragments = alpha.filter((t) => t.length <= 2 && !SHORT_WORDS.has(t)).length;
+  const splitWords = alpha.length >= 25 && fragments / alpha.length > 0.28;
+  const brandSet = findBrands(`${subject}\n${input.text.slice(0, 20_000)}`, false);
+  if (splitWords) for (const b of findBrandsCollapsed(`${subject} ${input.text}`)) if (!brandSet.includes(b)) brandSet.push(b);
+  const brandMentions = brandSet.map((b) => b.id);
 
   const tokens = tokenize(`${subject} ${input.text.slice(0, 5000)}`);
   let language = 'unknown';
@@ -84,6 +100,22 @@ export function analyzeContent(input: ContentInputs): ContentAnalysis {
 
   const fakeReply = /^\s*(re|fw|fwd|aw|sv|vs|rif|tr)\s*:/i.test(subject) && !input.inReplyTo && !input.references;
 
+  // Look-alike characters from other alphabets hidden in an otherwise Latin subject ("Тах Refund").
+  const foreignLetters = subject.match(/[Ͱ-ϿЀ-ӿ԰-֏]/g)?.length ?? 0;
+  const latinLetters = subject.match(/[a-z]/gi)?.length ?? 0;
+  const subjectHomoglyph = hasMixedScriptWord(subject) || (foreignLetters > 0 && latinLetters > foreignLetters * 2);
+
+  // Mass lures personalise with the victim's address: "[jose] Payment Confirmed", "for jose@monkey.org".
+  let personalized: string | null = null;
+  const rcpt = (input.recipient ?? '').toLowerCase();
+  if (rcpt) {
+    const local = rcpt.split('@')[0] ?? '';
+    const s = subject.toLowerCase();
+    if (s.includes(rcpt)) personalized = rcpt;
+    else if (local.length >= 3 && new RegExp(`(^|[\\s[(<:"'])${local.replace(/[^a-z0-9._-]/g, '')}([\\s\\])>:,"'!?]|$)`).test(s) && !/^(re|fwd?):/i.test(s)) personalized = local;
+  }
+  const phoneInHeader = /(?:\+?\d[\d\s().-]{8,}\d)/.test(`${subject} ${input.fromName ?? ''}`) && ((`${subject} ${input.fromName ?? ''}`.match(/\d/g) ?? []).length >= 10);
+
   return {
     subject,
     subjectTemplate: templatize(subject),
@@ -96,6 +128,10 @@ export function analyzeContent(input: ContentInputs): ContentAnalysis {
     genericGreeting,
     phoneNumbers: [...phones],
     fakeReply,
+    subjectHomoglyph,
+    personalized,
+    phoneInHeader,
+    splitWords,
     attachmentInstructions: attachmentInstruction,
     textPreview: truncate(collapseWs(input.text), 280),
   };

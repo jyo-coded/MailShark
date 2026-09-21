@@ -122,8 +122,13 @@ export interface SenderAnalysis {
   impersonatedBrand: string | null;
   verifiedBrand: string | null;
   lookalikeOf: string | null;
+  lookalikeKind: 'homoglyph' | 'typosquat' | 'embedded' | 'subdomain' | null;
   displayNameAddress: string | null;
   firstTimeSender: boolean | null;
+  /** The recipient's own organisation is used as a lure (display name/subject) by an outside sender. */
+  impersonatesRecipientOrg: string | null;
+  /** Display name poses as an IT / mail-system role. */
+  roleName: string | null;
 }
 
 // ── Links ───────────────────────────────────────────────────────────────────
@@ -184,6 +189,10 @@ export interface ContentAnalysis {
   genericGreeting: boolean;
   phoneNumbers: string[];
   fakeReply: boolean;
+  subjectHomoglyph: boolean;
+  personalized: string | null;
+  phoneInHeader: boolean;
+  splitWords: boolean;
   attachmentInstructions: string[];
   textPreview: string;
 }

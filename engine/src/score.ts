@@ -18,7 +18,7 @@ import type {
   Verdict,
 } from './types';
 import { brandById, isBrandDomain } from './data/brands';
-import { truncate } from './util/text';
+import { INVISIBLE_RE, STYLED_LETTERS_RE, truncate } from './util/text';
 
 export const BIAS = -2.6;
 export const DANGER_AT = 70;
@@ -42,6 +42,8 @@ export interface FindingsInput {
   esp: EspInfo | null;
   xMailer: string | null;
   hasListUnsubscribe: boolean;
+  isList: boolean;
+  subject: string;
   intel: IntelProvider | null | undefined;
   senderSeenCount: number | null | undefined;
 }
@@ -76,8 +78,38 @@ export function buildFindings(x: FindingsInput): Finding[] {
       [{ label: 'From', value: fromLabel, mono: true }, { label: 'Real domain', value: from?.domain ?? 'n/a', mono: true }]));
   }
   if (x.sender.lookalikeOf && from) {
-    out.push(f('sender.lookalike-domain', 'sender', 'critical', 3.0, 'Sender domain imitates a real brand',
-      `${from.domain} is a look-alike of ${x.sender.lookalikeOf}: a classic trick to pass a quick glance.`, [{ label: 'Sender domain', value: from.domain, mono: true }]));
+    const strong = x.sender.lookalikeKind === 'homoglyph' || x.sender.lookalikeKind === 'typosquat';
+    out.push(
+      strong
+        ? f('sender.lookalike-domain', 'sender', 'critical', 3.0, 'Sender domain imitates a real brand',
+            `${from.domain} is a look-alike of ${x.sender.lookalikeOf}: a classic trick to pass a quick glance.`, [{ label: 'Sender domain', value: from.domain, mono: true }])
+        : f('sender.brand-in-domain', 'sender', 'medium', 1.0, 'Sender domain contains a brand name',
+            `${from.domain} embeds the name of ${x.sender.lookalikeOf} without belonging to it.`, [{ label: 'Sender domain', value: from.domain, mono: true }]),
+    );
+  }
+  const credentialLure = x.content.intent === 'credential' || x.content.intent === 'document';
+  if (x.sender.impersonatesRecipientOrg && from) {
+    const org = x.sender.impersonatesRecipientOrg;
+    const inName = (from.name ?? '').toLowerCase().includes(org.split('.')[0] ?? org);
+    const strong = inName || credentialLure;
+    out.push(f('sender.recipient-org-lure', 'sender', strong ? 'critical' : 'medium', strong ? 3.0 : 1.0, `Poses as your own organisation (${org})`,
+      `The message invokes ${org}, your own mail domain, but it was sent from ${from.orgDomain}. Your real IT team would write from inside ${org}.`,
+      [{ label: 'From', value: fromLabel, mono: true }, { label: 'Your domain', value: org, mono: true }]));
+  } else if (x.sender.roleName && from && !x.sender.verifiedBrand) {
+    out.push(f('sender.role-name', 'sender', credentialLure ? 'high' : 'low', credentialLure ? 1.8 : 0.5, `Sender poses as “${x.sender.roleName}”`,
+      `A generic IT/mail-system role name on an address at ${from.orgDomain}: a common disguise for mailbox and password lures.`,
+      [{ label: 'From', value: fromLabel, mono: true }]));
+  }
+  const nameAndSubject = `${from?.name ?? ''} ${x.subject}`;
+  if (INVISIBLE_RE.test(nameAndSubject)) {
+    out.push(f('sender.invisible-chars', 'sender', 'high', 2.0, 'Invisible characters hidden in the sender name or subject',
+      'Hidden Unicode characters are sprinkled between letters so filters cannot read brand names or keywords, while you still see them normally.'));
+  }
+  if (STYLED_LETTERS_RE.test(nameAndSubject)) {
+    out.push(f('content.styled-letters', 'content', 'low', 0.6, 'Fancy Unicode lettering in the subject', 'Words are written with “mathematical” Unicode letters (𝐋𝐈𝐊𝐄 𝐓𝐇𝐈𝐒), a common way to dodge keyword filters.'));
+  }
+  if (!from || !from.address || !from.address.includes('@')) {
+    out.push(f('sender.no-address', 'sender', 'medium', 1.0, 'No real sender address', 'The From field carries a name but no usable address: legitimate services always send from a real mailbox.'));
   }
   if (x.sender.displayNameAddress && from) {
     out.push(f('sender.display-name-address', 'sender', 'high', 2.0, 'Fake address shown in the sender name',
@@ -87,7 +119,7 @@ export function buildFindings(x: FindingsInput): Finding[] {
     out.push(f('sender.homoglyph-name', 'sender', 'high', 1.8, 'Sender name mixes alphabets',
       'The display name mixes Latin letters with look-alike characters from other alphabets (homoglyphs).', [{ label: 'Display name', value: from.name }]));
   }
-  if (from && x.sender.replyTo.length) {
+  if (from && x.sender.replyTo.length && !x.isList) {
     const rt = x.sender.replyTo.find((r) => r.orgDomain && r.orgDomain !== from.orgDomain);
     if (rt) {
       const rtFree = x.sender.isFreemail ? false : ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'proton.me', 'protonmail.com', 'icloud.com', 'aol.com', 'mail.ru', 'yandex.ru', 'gmx.com'].includes(rt.orgDomain);
@@ -105,6 +137,9 @@ export function buildFindings(x: FindingsInput): Finding[] {
   if (x.sender.verifiedBrand) {
     out.push(f('sender.verified-brand', 'sender', 'info', -1.4, `Verified ${brandName(x.sender.verifiedBrand)} sender`,
       `The message is authenticated for a domain that belongs to ${brandName(x.sender.verifiedBrand)}.`));
+  }
+  if (x.isList && !x.sender.impersonatedBrand && !x.sender.impersonatesRecipientOrg) {
+    out.push(f('route.mailing-list', 'route', 'info', -0.4, 'Discussion-list message', 'The message carries mailing-list headers (List-Id / Mailman), typical of group discussions rather than one-off lures.'));
   }
   if (x.senderSeenCount != null) {
     if (x.senderSeenCount >= 3) out.push(f('sender.known', 'sender', 'info', -0.7, 'Sender you hear from regularly', `You have received ${x.senderSeenCount} earlier emails from this address.`));
@@ -150,7 +185,8 @@ export function buildFindings(x: FindingsInput): Finding[] {
   };
   addLink('links.threat-intel', 'critical', 4.0, 'Link to a known malicious site', 'A link points to a domain listed on a public threat-intelligence feed.', anchorLinks.filter((l) => l.intelHit));
   addLink('links.lookalike', 'critical', 3.0, 'Link to a look-alike domain', 'A link imitates a real brand domain with swapped or extra characters.', anchorLinks.filter((l) => l.flags.includes('lookalike-homoglyph') || l.flags.includes('lookalike-typosquat')));
-  addLink('links.brand-embedded', 'high', 1.8, 'Link hides a brand name inside another domain', 'A link uses a brand name as a decoy within an unrelated domain (e.g. paypal.com.secure-check.xyz).', anchorLinks.filter((l) => l.flags.includes('lookalike-embedded') || l.flags.includes('lookalike-subdomain')));
+  const lureContext = !!x.content.intent && BRAND_INTENTS.has(x.content.intent);
+  addLink('links.brand-embedded', lureContext ? 'high' : 'medium', lureContext ? 1.8 : 0.8, 'Link hides a brand name inside another domain', 'A link uses a brand name as a decoy within an unrelated domain (e.g. paypal.com.secure-check.xyz).', anchorLinks.filter((l) => l.flags.includes('lookalike-embedded') || l.flags.includes('lookalike-subdomain')));
   addLink('links.text-mismatch', 'high', 2.2, 'Link text lies about its destination', 'The visible link text shows one website, but clicking it opens a different one.', anchorLinks.filter((l) => l.flags.includes('text-href-mismatch')));
   addLink('links.ip-host', 'high', 2.0, 'Link points to a raw IP address', 'Legitimate services almost never send links to bare IP addresses.', anchorLinks.filter((l) => l.flags.includes('ip-host')));
   addLink('links.punycode', 'high', 1.8, 'Link uses an internationalized (punycode) domain', 'The domain contains non-Latin characters that can visually mimic a familiar name.', anchorLinks.filter((l) => l.flags.includes('punycode') || l.flags.includes('mixed-script')));
@@ -159,21 +195,29 @@ export function buildFindings(x: FindingsInput): Finding[] {
   addLink('links.ipfs', 'high', 1.8, 'Link to decentralized (IPFS) hosting', 'IPFS pages cannot be taken down easily and are popular for phishing kits.', anchorLinks.filter((l) => l.flags.includes('ipfs')));
   const credIntent = x.content.intent === 'credential' || x.content.intent === 'document';
   addLink('links.free-hosting', credIntent ? 'high' : 'medium', credIntent ? 1.6 : 0.9, 'Link to a free website / form builder', 'Anyone can create a page on these platforms in minutes: they are heavily abused for fake login pages.', anchorLinks.filter((l) => l.flags.includes('free-hosting') || l.flags.includes('form-service')));
-  addLink('links.file-download', 'medium', 1.2, 'Link downloads a risky file type', 'The link points directly to an executable, script, archive or HTML file.', anchorLinks.filter((l) => l.flags.includes('file-download')));
+  addLink('links.file-download', 'high', 1.6, 'Link downloads a program or script', 'The link points straight at an executable, script, disk image or macro document.', anchorLinks.filter((l) => l.flags.includes('file-download')));
+  addLink('links.archive-download', 'low', 0.3, 'Link downloads an archive', 'Archives can hide malware from scanners; open only what you expected.', anchorLinks.filter((l) => l.flags.includes('archive-download')));
   addLink('links.nonstandard-port', 'medium', 0.8, 'Link uses an unusual network port', 'Web links rarely specify custom ports.', anchorLinks.filter((l) => l.flags.includes('nonstandard-port')));
   addLink('links.shortener', 'low', 0.5, 'Shortened link hides the destination', 'URL shorteners conceal where a link really goes.', anchorLinks.filter((l) => l.flags.includes('shortener')));
   addLink('links.suspicious-tld', 'low', 0.4, 'Link on a high-abuse domain ending', 'Some domain endings are disproportionately used by attackers.', anchorLinks.filter((l) => l.flags.includes('suspicious-tld')));
   addLink('links.redirect', 'low', 0.4, 'Link bounces through a redirect', 'The link passes you on to another site via a URL parameter.', anchorLinks.filter((l) => l.flags.includes('redirect-param')));
 
   // Brand mentioned with a lure, but neither sender nor links belong to that brand.
-  if (x.content.intent && BRAND_INTENTS.has(x.content.intent) && !x.sender.verifiedBrand && !x.sender.impersonatedBrand) {
+  const lure = x.content.intents[0];
+  if (lure && lure.score >= 4 && BRAND_INTENTS.has(lure.id) && !x.sender.verifiedBrand && !x.sender.impersonatedBrand) {
+    const head = `${x.subject} ${from?.name ?? ''} ${x.content.textPreview.slice(0, 280)}`.toLowerCase();
     for (const bid of x.content.brandMentions) {
       const brand = brandById(bid);
       if (!brand || !from) continue;
       if (isBrandDomain(brand, from.orgDomain)) continue;
-      const linkDomains = anchorLinks.map((l) => l.regDomain).filter((d): d is string => !!d);
-      const linksToBrand = linkDomains.some((d) => isBrandDomain(brand, d));
-      if (linkDomains.length && !linksToBrand) {
+      if (!brand.names.some((n) => head.includes(n))) continue;
+      // Phishers often sprinkle genuine brand links for credibility; what matters is a call to
+      // action pointing somewhere that is neither the brand, the sender, nor mail tracking.
+      const linkDomains = anchorLinks
+        .filter((l) => !l.flags.includes('unsubscribe') && !l.flags.includes('esp-tracking'))
+        .map((l) => l.regDomain)
+        .filter((d): d is string => !!d && !isBrandDomain(brand, d) && d !== from.orgDomain);
+      if (linkDomains.length) {
         out.push(f('content.brand-lure', 'content', 'high', 1.8, `Uses the ${brand.name} name, but isn't from ${brand.name}`,
           `The message talks about your ${brand.name} account/order, yet it was sent by ${from.orgDomain} and its links lead elsewhere.`,
           [{ label: 'Sender', value: from.address, mono: true }, { label: 'Links to', value: [...new Set(linkDomains)].slice(0, 3).join(', '), mono: true }]));
@@ -185,16 +229,17 @@ export function buildFindings(x: FindingsInput): Finding[] {
   // ── HTML ──
   const h = x.html;
   if (h.forms.some((fm) => fm.hasPassword)) out.push(f('html.credential-form', 'html', 'critical', 3.0, 'Password form inside the email', 'The email itself contains a password field: real services never ask you to type credentials into an email.'));
-  else if (h.forms.length) out.push(f('html.form', 'html', 'high', 1.5, 'Embedded form collects data', 'The email contains an input form that can submit what you type to a third party.', h.forms.slice(0, 2).map((fm) => ({ label: 'Form action', value: fm.action ?? '(none)', mono: true }))));
-  if (h.scripts > 0) out.push(f('html.script', 'html', 'medium', 1.0, 'Contains scripts', `${h.scripts} <script> element(s): email clients block them, so their presence is a red flag.`));
-  if (h.iframes + h.embeds > 0) out.push(f('html.iframe', 'html', 'medium', 0.8, 'Embeds external frames/objects', 'Frames and embedded objects are used to smuggle remote content into messages.'));
+  else if (h.forms.length) out.push(f('html.form', 'html', 'low', 0.6, 'Embedded form collects data', 'The email contains an input form that can submit what you type to a third party.', h.forms.slice(0, 2).map((fm) => ({ label: 'Form action', value: fm.action ?? '(none)', mono: true }))));
+  if (h.scripts > 0) out.push(f('html.script', 'html', 'low', 0.6, 'Contains scripts', `${h.scripts} <script> element(s): email clients block them, so their presence is a red flag.`));
+  if (h.iframes + h.embeds > 0) out.push(f('html.iframe', 'html', 'low', 0.4, 'Embeds external frames/objects', 'Frames and embedded objects are used to smuggle remote content into messages.'));
   if (h.metaRefresh) out.push(f('html.meta-refresh', 'html', 'medium', 1.0, 'Auto-redirect instruction', 'A meta-refresh tag tries to send you to another page automatically.', [{ label: 'Refresh', value: truncate(h.metaRefresh, 120), mono: true }]));
   if (h.hiddenTextChars > 120 && h.hiddenTextChars > h.visibleTextChars * 0.25) {
-    out.push(f('html.hidden-text', 'html', 'medium', 0.9, 'Hidden text to fool spam filters', `${h.hiddenTextChars} characters are invisible to you but readable by filters ("hidden text salting").`,
+    out.push(f('html.hidden-text', 'html', 'medium', 1.2, 'Hidden text to fool spam filters', `${h.hiddenTextChars} characters are invisible to you but readable by filters ("hidden text salting").`,
       x.hiddenTextSample ? [{ label: 'Hidden sample', value: truncate(x.hiddenTextSample, 140) }] : undefined));
   }
   if (h.zeroWidthChars >= 5) out.push(f('html.zero-width', 'html', 'medium', 0.9, 'Invisible characters break up words', `${h.zeroWidthChars} zero-width characters are inserted to dodge keyword detection.`));
   if (h.imageOnly && anchorLinks.length) out.push(f('html.image-only', 'html', 'low', 0.6, 'Message is mostly an image', 'Text rendered as an image hides the wording from security filters.'));
+  if (h.imageOnly && h.hiddenTextChars > 120) out.push(f('html.image-with-filler', 'html', 'high', 1.2, 'Picture-only message padded with invisible text', 'The visible message is a picture while hidden filler text feeds the spam filter: a combined evasion technique.'));
   if (h.trackingPixels > 0 || x.links.some((l) => l.flags.includes('tracking'))) out.push(f('html.tracking', 'html', 'info', 0, 'Reports back when you open it', 'The email contains a tracking pixel: opening it (with images on) tells the sender you read it.'));
 
   // ── Content ──
@@ -207,9 +252,23 @@ export function buildFindings(x: FindingsInput): Finding[] {
       c.requestedActions.length ? `It pushes you to ${c.requestedActions.join(', ')}.` : 'Its wording matches a known phishing playbook.',
       [{ label: 'Trigger phrases', value: top.matches.slice(0, 5).map((m) => `"${m}"`).join(', ') }]));
   }
+  if (c.subjectHomoglyph) out.push(f('content.homoglyph-subject', 'content', 'high', 1.8, 'Subject disguises letters with look-alikes', 'Some letters in the subject come from other alphabets (e.g. Cyrillic “а” instead of “a”) to slip past keyword filters.', [{ label: 'Subject', value: x.subject }]));
+  if (c.personalized) out.push(f('content.personalized-subject', 'content', credIntent || c.intent === 'payment' ? 'medium' : 'low', credIntent || c.intent === 'payment' ? 1.0 : 0.4, 'Your address is used as bait in the subject', `Mass-mailed lures paste the recipient's address (“${c.personalized}”) into the subject to look personal.`));
+  const callbackScore = c.intents.find((i) => i.id === 'callback')?.score ?? 0;
+  const payLike = c.intents.some((i) => (i.id === 'callback' || i.id === 'payment') && i.score >= 1.5);
+  if (c.phoneInHeader && (payLike || c.brandMentions.length || x.sender.claimedBrands.length)) {
+    // A support number in the subject/sender name is almost never legitimate; it is also how
+    // attackers abuse genuine invoicing systems (e.g. real PayPal invoices), so it stays critical
+    // even when the sending domain authenticates.
+    out.push(f('content.callback-phone', 'content', payLike ? 'critical' : 'high', payLike ? 3.0 : 2.0, 'Phone number planted in the sender name or subject', 'Call-back scams put a “support” number where you will see it first, then ask you to call and pay or grant remote access.', c.phoneNumbers.length ? [{ label: 'Number', value: c.phoneNumbers[0] as string, mono: true }] : undefined));
+  } else if (c.phoneNumbers.length && callbackScore >= 2.5) {
+    const strong = c.brandMentions.length > 0 || callbackScore >= 4;
+    out.push(f('content.callback-phone', 'content', strong ? 'high' : 'medium', strong ? 1.8 : 1.2, 'Asks you to call a phone number', 'The message pushes you to call a number about a charge, order or renewal: the hallmark of call-back (TOAD) scams.', [{ label: 'Number', value: c.phoneNumbers[0] as string, mono: true }]));
+  }
+  if (c.splitWords) out.push(f('content.split-words', 'content', 'medium', 1.2, 'Words broken up to dodge filters', 'Many words in the message are split with spaces (“Lin ked i n”), a trick to stop keyword filters from reading it.'));
   if (c.urgency >= 2) out.push(f('content.urgency', 'content', c.urgency === 3 ? 'medium' : 'low', c.urgency === 3 ? 1.0 : 0.5, 'Creates pressure to act fast', 'Deadlines and threats are designed to make you skip careful thinking.'));
   if (c.genericGreeting) out.push(f('content.generic-greeting', 'content', 'low', 0.3, 'Generic greeting', 'It doesn\'t address you by name, as mass-mailed lures usually don\'t.'));
-  if (c.fakeReply) out.push(f('content.fake-reply', 'content', 'high', 1.6, 'Pretends to be part of a conversation', 'The subject starts with "Re:"/"Fwd:" but the message is not a reply to anything you sent.'));
+  if (c.fakeReply) out.push(f('content.fake-reply', 'content', 'medium', 1.2, 'Pretends to be part of a conversation', 'The subject starts with "Re:"/"Fwd:" but the message is not a reply to anything you sent.'));
   const risky = c.attachmentInstructions.filter((p) => /enable|macros/.test(p));
   if (risky.length) out.push(f('content.enable-content', 'content', 'critical', 2.6, 'Tells you to enable macros/content', 'Enabling editing or macros in a document is how most malware attachments activate.', [{ label: 'Phrases', value: risky.join(', ') }]));
   if (c.attachmentInstructions.some((p) => /password/.test(p)) && x.attachments.some((at) => at.flags.includes('encrypted-archive') || at.flags.includes('encrypted-office'))) {
@@ -239,7 +298,7 @@ export function buildFindings(x: FindingsInput): Finding[] {
   const dangerousDupes = s.duplicateHeaders.filter((d) => ['from', 'subject', 'to', 'date', 'message-id', 'reply-to', 'sender', 'content-type'].includes(d));
   if (dangerousDupes.length) out.push(f('structure.duplicate-headers', 'structure', 'high', 1.8, 'Duplicate critical headers', 'Two conflicting copies of the same header can make different programs show different senders (parser-confusion attack).', [{ label: 'Duplicated', value: dangerousDupes.join(', '), mono: true }]));
   if (s.anomalies.length) out.push(f('structure.anomalies', 'structure', 'low', 0.4, 'Malformed MIME structure', 'The message structure is broken in ways normal mail software does not produce.', [{ label: 'Anomalies', value: s.anomalies.join(', '), mono: true }]));
-  if (s.textHtmlDivergence !== null && s.textHtmlDivergence > 0.85) out.push(f('structure.divergence', 'structure', 'medium', 0.8, 'Text and HTML versions say different things', 'The plain-text part (what filters read) differs from the HTML part (what you see).'));
+  if (s.textHtmlDivergence !== null && s.textHtmlDivergence > 0.85) out.push(f('structure.divergence', 'structure', 'low', 0.4, 'Text and HTML versions say different things', 'The plain-text part (what filters read) differs from the HTML part (what you see).'));
 
   // ── Bulk infrastructure & tooling ──
   if (x.esp && !['phpmailer', 'gammadyne', 'sendblaster'].includes(x.esp.id)) {

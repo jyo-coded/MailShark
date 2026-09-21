@@ -91,6 +91,21 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
     receiverOrg: route.receiverOrg,
     fromDomain,
   });
+  // Whose mailbox is this? Delivered-To is written by the receiving server; To is a fallback.
+  // Receiving servers also record it in "Received: … for <user@domain>".
+  const receivedFor = (() => {
+    for (const hop of [...route.hops].reverse()) {
+      const m = /\bfor\s+<?([^\s<>;@]+@[^\s<>;]+?)>?[\s;]/i.exec(hop.raw + ' ');
+      if (m && m[1]) return m[1];
+    }
+    return null;
+  })();
+  const recipient =
+    parseAddressList(hv('delivered-to'))[0] ??
+    parseAddressList(hv('x-original-to'))[0] ??
+    (receivedFor ? parseAddressList(receivedFor)[0] : undefined) ??
+    parseAddressList(hv('to'))[0] ??
+    null;
   const sender = analyzeSender({
     fromRaw: hv('from'),
     replyToRaw: hv('reply-to'),
@@ -99,7 +114,11 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
     auth,
     subject,
     senderSeenCount: options.context?.senderSeenCount,
+    recipient,
   });
+  // Discussion lists (Mailman, Google Groups, LISTSERV…) legitimately rewrite Reply-To and thread
+  // loosely; they announce themselves with list headers.
+  const isList = !!(hv('list-id') || hv('list-post') || hv('x-mailman-version') || hv('x-beenthere') || hv('mailing-list') || /\blist\b/i.test(hv('precedence') ?? ''));
   mark('identity', t);
 
   // ── Body ──
@@ -146,10 +165,12 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
   const content = analyzeContent({
     subject,
     text: bodyText,
-    inReplyTo: hv('in-reply-to'),
+    inReplyTo: hv('in-reply-to') ?? (isList ? 'list' : null),
     references: hv('references'),
     hasLinks: links.some((l) => l.sources.includes('html-anchor') || l.sources.includes('text')),
     hasAttachments: attachments.some((a) => !a.inline),
+    fromName: sender.from?.name ?? '',
+    recipient: recipient?.address ?? null,
   });
   mark('content', t);
 
@@ -204,6 +225,8 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
       esp,
       xMailer,
       hasListUnsubscribe: !!lu,
+      isList,
+      subject,
       intel: options.intel,
       senderSeenCount: options.context?.senderSeenCount,
     }),

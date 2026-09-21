@@ -3,6 +3,8 @@
 // `names` are lowercase phrases matched on word boundaries. `ambiguous` brands (common words)
 // only count when they appear in the sender display name or next to a context word.
 
+import { deobfuscate } from '../util/text';
+
 export interface Brand {
   id: string;
   name: string;
@@ -19,8 +21,8 @@ export const BRANDS: Brand[] = [
     domains: ['microsoft.com', 'microsoftonline.com', 'office.com', 'office365.com', 'office.net', 'outlook.com', 'live.com', 'hotmail.com', 'msn.com', 'azure.com', 'windows.com', 'windows.net', 'sharepoint.com', 'onedrive.com', 'xbox.com', 'skype.com', 'bing.com', 'microsoftstore.com', 'msftauth.net', 'msauth.net', 'aka.ms', 'microsoft365.com', 'cloud.microsoft', 'mail.microsoft', 'dynamics.com', 'visualstudio.com', 'azureedge.net', 'sfx.ms', 'microsoftsupport.com', 'onenote.com'],
   },
   { id: 'google', name: 'Google', names: ['google', 'gmail', 'google drive', 'google docs', 'google workspace', 'youtube', 'google play', 'google pay'], domains: ['google.com', 'google.co.in', 'youtube.com', 'gmail.com', 'googlemail.com', 'gstatic.com', 'googleusercontent.com', 'withgoogle.com', 'goo.gl', 'g.co', 'googleapis.com', 'android.com', 'blogger.com', 'google.dev'] },
-  { id: 'apple', name: 'Apple', names: ['apple', 'icloud', 'apple id', 'itunes', 'app store', 'apple pay', 'apple support'], domains: ['apple.com', 'icloud.com', 'me.com', 'mac.com', 'itunes.com', 'apple.news', 'appleid.apple.com', 'mzstatic.com', 'apps.apple.com'], ambiguous: true, context: ['id', 'icloud', 'account', 'store', 'pay', 'support', 'iphone', 'ipad', 'macbook', 'subscription', 'itunes'] },
-  { id: 'amazon', name: 'Amazon', names: ['amazon', 'amazon prime', 'prime video', 'aws', 'amazon web services', 'kindle'], domains: ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.de', 'amazon.fr', 'amazon.ca', 'amazon.com.au', 'amazon.co.jp', 'amazonaws.com', 'aws.amazon.com', 'primevideo.com', 'amazonses.com', 'media-amazon.com', 'amazon.jobs', 'awsapps.com', 'kindle.com', 'a2z.com', 'amzn.to', 'amazonpay.in', 'aboutamazon.com'] },
+  { id: 'apple', name: 'Apple', names: ['apple', 'icloud', 'apple id', 'appleid', 'itunes', 'app store', 'appstore', 'apple pay', 'apple support'], domains: ['apple.com', 'icloud.com', 'me.com', 'mac.com', 'itunes.com', 'apple.news', 'appleid.apple.com', 'mzstatic.com', 'apps.apple.com'], ambiguous: true, context: ['id', 'icloud', 'account', 'store', 'pay', 'support', 'iphone', 'ipad', 'macbook', 'subscription', 'itunes'] },
+  { id: 'amazon', name: 'Amazon', names: ['amazon', 'amazon prime', 'prime video', 'prime membership', 'aws', 'amazon web services', 'kindle'], domains: ['amazon.com', 'amazon.in', 'amazon.co.uk', 'amazon.de', 'amazon.fr', 'amazon.ca', 'amazon.com.au', 'amazon.co.jp', 'amazonaws.com', 'aws.amazon.com', 'primevideo.com', 'amazonses.com', 'media-amazon.com', 'amazon.jobs', 'awsapps.com', 'kindle.com', 'a2z.com', 'amzn.to', 'amazonpay.in', 'aboutamazon.com'] },
   { id: 'meta', name: 'Meta / Facebook', names: ['facebook', 'meta', 'instagram', 'whatsapp', 'messenger', 'meta business', 'facebook ads'], domains: ['facebook.com', 'facebookmail.com', 'fb.com', 'meta.com', 'instagram.com', 'whatsapp.com', 'whatsapp.net', 'messenger.com', 'metamail.com', 'fbcdn.net', 'threads.net', 'mail.instagram.com'], ambiguous: true, context: ['facebook', 'instagram', 'business', 'ads', 'page', 'account', 'verified', 'copyright', 'violation'] },
   { id: 'linkedin', name: 'LinkedIn', names: ['linkedin'], domains: ['linkedin.com', 'licdn.com', 'lnkd.in', 'linkedinmail.com'] },
   { id: 'twitter', name: 'X / Twitter', names: ['twitter', 'x corp'], domains: ['twitter.com', 'x.com', 't.co', 'twimg.com'] },
@@ -35,7 +37,7 @@ export const BRANDS: Brand[] = [
   { id: 'salesforce', name: 'Salesforce', names: ['salesforce'], domains: ['salesforce.com', 'force.com', 'exacttarget.com'] },
   { id: 'zoho', name: 'Zoho', names: ['zoho'], domains: ['zoho.com', 'zoho.in', 'zohomail.com', 'zohocorp.com'] },
   { id: 'canva', name: 'Canva', names: ['canva'], domains: ['canva.com', 'canva.site'] },
-  { id: 'norton', name: 'Norton', names: ['norton', 'norton 360', 'norton antivirus', 'nortonlifelock', 'gen digital'], domains: ['norton.com', 'nortonlifelock.com', 'gendigital.com', 'symantec.com'] },
+  { id: 'norton', name: 'Norton', names: ['norton', 'norton 360', 'norton antivirus', 'nortonlifelock', 'gen digital'], domains: ['norton.com', 'nortonlifelock.com', 'gendigital.com', 'symantec.com'], ambiguous: true, context: ['antivirus', 'subscription', '360', 'lifelock', 'renewal', 'renewed', 'protection', 'invoice', 'order'] },
   { id: 'mcafee', name: 'McAfee', names: ['mcafee', 'mc afee'], domains: ['mcafee.com', 'mcafee.co.in'] },
   { id: 'geeksquad', name: 'Geek Squad', names: ['geek squad', 'geeksquad', 'best buy'], domains: ['bestbuy.com', 'geeksquad.com'] },
   { id: 'intuit', name: 'Intuit / QuickBooks', names: ['intuit', 'quickbooks', 'turbotax', 'mailchimp'], domains: ['intuit.com', 'quickbooks.com', 'turbotax.com', 'mailchimp.com', 'notification.intuit.com'] },
@@ -45,7 +47,7 @@ export const BRANDS: Brand[] = [
   { id: 'steam', name: 'Steam', names: ['steam', 'steam community', 'valve'], domains: ['steampowered.com', 'steamcommunity.com', 'valvesoftware.com'], ambiguous: true, context: ['account', 'community', 'trade', 'gift', 'wallet', 'guard'] },
   { id: 'roblox', name: 'Roblox', names: ['roblox'], domains: ['roblox.com'] },
   { id: 'samsung', name: 'Samsung', names: ['samsung'], domains: ['samsung.com'] },
-  { id: 'yahoo', name: 'Yahoo', names: ['yahoo', 'yahoo mail'], domains: ['yahoo.com', 'yahoo.co.in', 'yahoo.net', 'yahooinc.com', 'aol.com'] },
+  { id: 'yahoo', name: 'Yahoo', names: ['yahoo', 'yahoo mail'], domains: ['yahoo.com', 'yahoo.co.in', 'yahoo.net', 'yahooinc.com', 'yahoogroups.com', 'yimg.com', 'yahoodns.net'] },
   { id: 'openai', name: 'OpenAI / ChatGPT', names: ['openai', 'chatgpt'], domains: ['openai.com', 'chatgpt.com', 'tm.openai.com'] },
 
   // ── Finance & payments ───────────────────────────────────────────────────
@@ -65,9 +67,14 @@ export const BRANDS: Brand[] = [
   { id: 'coinbase', name: 'Coinbase', names: ['coinbase'], domains: ['coinbase.com', 'coinbase.io'] },
   { id: 'binance', name: 'Binance', names: ['binance'], domains: ['binance.com', 'binance.us'] },
   { id: 'metamask', name: 'MetaMask', names: ['metamask', 'meta mask'], domains: ['metamask.io', 'consensys.io', 'consensys.net'] },
-  { id: 'ledger', name: 'Ledger', names: ['ledger live', 'ledger wallet', 'ledger nano'], domains: ['ledger.com'] },
+  { id: 'ledger', name: 'Ledger', names: ['ledger live', 'ledger wallet', 'ledger nano', 'ledger'], domains: ['ledger.com'], ambiguous: true, context: ['wallet', 'crypto', 'nano', 'live', 'seed', 'recovery', 'firmware', 'bitcoin'] },
   { id: 'trustwallet', name: 'Trust Wallet', names: ['trust wallet', 'trustwallet'], domains: ['trustwallet.com'] },
-  { id: 'wise', name: 'Wise', names: ['transferwise', 'wise transfer'], domains: ['wise.com', 'transferwise.com'] },
+  { id: 'wise', name: 'Wise', names: ['transferwise', 'wise transfer', 'wise'], domains: ['wise.com', 'transferwise.com'], ambiguous: true, context: ['transfer', 'account', 'payment', 'money', 'card', 'balance'] },
+  { id: 'schwab', name: 'Charles Schwab', names: ['charles schwab', 'schwab'], domains: ['schwab.com'] },
+  { id: 'fidelity', name: 'Fidelity', names: ['fidelity investments'], domains: ['fidelity.com'] },
+  { id: 'robinhood', name: 'Robinhood', names: ['robinhood'], domains: ['robinhood.com'] },
+  { id: 'kraken', name: 'Kraken', names: ['kraken exchange'], domains: ['kraken.com'] },
+  { id: 'stellar', name: 'Stellar', names: ['stellar.org', 'stellar lumens', 'xlm'], domains: ['stellar.org'] },
   { id: 'westernunion', name: 'Western Union', names: ['western union'], domains: ['westernunion.com', 'wu.com'] },
   { id: 'moneygram', name: 'MoneyGram', names: ['moneygram'], domains: ['moneygram.com'] },
   // India: banking, payments, government
@@ -129,6 +136,89 @@ export const BRANDS: Brand[] = [
   { id: 'costco', name: 'Costco', names: ['costco'], domains: ['costco.com'] },
   { id: 'shopify', name: 'Shopify', names: ['shopify'], domains: ['shopify.com', 'myshopify.com', 'shopifyemail.com'] },
 
+  // ── More banks (frequently impersonated worldwide) ───────────────────────
+  { id: 'usaa', name: 'USAA', names: ['usaa'], domains: ['usaa.com'] },
+  { id: 'fifththird', name: 'Fifth Third Bank', names: ['fifth third', '53 bank', 'fifththird'], domains: ['53.com', 'fifththird.com'] },
+  { id: 'pnc', name: 'PNC Bank', names: ['pnc bank', 'pnc online'], domains: ['pnc.com'] },
+  { id: 'usbank', name: 'U.S. Bank', names: ['u.s. bank', 'us bank', 'usbank'], domains: ['usbank.com'] },
+  { id: 'tdbank', name: 'TD Bank', names: ['td bank', 'td canada trust', 'td ameritrade'], domains: ['td.com', 'tdbank.com', 'tdameritrade.com'] },
+  { id: 'regionsbank', name: 'Regions Bank', names: ['regions bank'], domains: ['regions.com'] },
+  { id: 'truist', name: 'Truist', names: ['truist', 'suntrust', 'bb&t'], domains: ['truist.com', 'suntrust.com', 'bbt.com'] },
+  { id: 'navyfederal', name: 'Navy Federal Credit Union', names: ['navy federal', 'navyfederal', 'nfcu'], domains: ['navyfederal.org'] },
+  { id: 'citizensbank', name: 'Citizens Bank', names: ['citizens bank'], domains: ['citizensbank.com'] },
+  { id: 'keybank', name: 'KeyBank', names: ['keybank', 'key bank'], domains: ['key.com'] },
+  { id: 'huntington', name: 'Huntington Bank', names: ['huntington bank'], domains: ['huntington.com'] },
+  { id: 'allybank', name: 'Ally Bank', names: ['ally bank', 'ally financial'], domains: ['ally.com'] },
+  { id: 'discover', name: 'Discover', names: ['discover card', 'discover bank'], domains: ['discover.com'] },
+  { id: 'natwest', name: 'NatWest', names: ['natwest', 'royal bank of scotland', 'rbs'], domains: ['natwest.com', 'rbs.co.uk'] },
+  { id: 'lloyds', name: 'Lloyds Bank', names: ['lloyds bank', 'lloyds', 'halifax'], domains: ['lloydsbank.com', 'lloydsbank.co.uk', 'halifax.co.uk', 'lloydsbankinggroup.com'] },
+  { id: 'rbc', name: 'RBC Royal Bank', names: ['royal bank of canada', 'rbc royal bank', 'rbc'], domains: ['rbc.com', 'rbcroyalbank.com'] },
+  { id: 'scotiabank', name: 'Scotiabank', names: ['scotiabank'], domains: ['scotiabank.com'] },
+  { id: 'bmo', name: 'BMO', names: ['bmo', 'bank of montreal'], domains: ['bmo.com'] },
+  { id: 'cibc', name: 'CIBC', names: ['cibc'], domains: ['cibc.com'] },
+  { id: 'desjardins', name: 'Desjardins', names: ['desjardins'], domains: ['desjardins.com'] },
+  { id: 'interac', name: 'Interac', names: ['interac', 'e-transfer'], domains: ['interac.ca'] },
+  { id: 'commbank', name: 'Commonwealth Bank', names: ['commonwealth bank', 'commbank', 'netbank'], domains: ['commbank.com.au'] },
+  { id: 'anz', name: 'ANZ', names: ['anz bank', 'anz'], domains: ['anz.com', 'anz.com.au'] },
+  { id: 'nab', name: 'NAB', names: ['national australia bank'], domains: ['nab.com.au'] },
+  { id: 'westpac', name: 'Westpac', names: ['westpac'], domains: ['westpac.com.au'] },
+  { id: 'ing', name: 'ING', names: ['ing bank', 'ing direct'], domains: ['ing.com', 'ing.nl', 'ing.de', 'ing.com.au'] },
+  { id: 'abnamro', name: 'ABN AMRO', names: ['abn amro', 'abnamro'], domains: ['abnamro.nl', 'abnamro.com'] },
+  { id: 'rabobank', name: 'Rabobank', names: ['rabobank'], domains: ['rabobank.nl', 'rabobank.com'] },
+  { id: 'bnp', name: 'BNP Paribas', names: ['bnp paribas', 'bnp'], domains: ['bnpparibas.com', 'bnpparibas.fr', 'mabanque.bnpparibas'] },
+  { id: 'socgen', name: 'Société Générale', names: ['societe generale', 'société générale'], domains: ['societegenerale.fr', 'societegenerale.com'] },
+  { id: 'creditagricole', name: 'Crédit Agricole', names: ['credit agricole', 'crédit agricole'], domains: ['credit-agricole.fr', 'credit-agricole.com'] },
+  { id: 'labanquepostale', name: 'La Banque Postale', names: ['banque postale'], domains: ['labanquepostale.fr'] },
+  { id: 'deutschebank', name: 'Deutsche Bank', names: ['deutsche bank'], domains: ['db.com', 'deutsche-bank.de'] },
+  { id: 'sparkasse', name: 'Sparkasse', names: ['sparkasse'], domains: ['sparkasse.de'] },
+  { id: 'commerzbank', name: 'Commerzbank', names: ['commerzbank'], domains: ['commerzbank.de', 'commerzbank.com'] },
+  { id: 'postbank', name: 'Postbank', names: ['postbank'], domains: ['postbank.de'] },
+  { id: 'itau', name: 'Itaú', names: ['itau', 'itaú'], domains: ['itau.com.br'] },
+  { id: 'bradesco', name: 'Bradesco', names: ['bradesco'], domains: ['bradesco.com.br'] },
+  { id: 'bancodobrasil', name: 'Banco do Brasil', names: ['banco do brasil'], domains: ['bb.com.br'] },
+  { id: 'caixa', name: 'Caixa', names: ['caixa economica', 'caixa econômica'], domains: ['caixa.gov.br'] },
+  { id: 'nubank', name: 'Nubank', names: ['nubank', 'banco nu', 'nu bank'], domains: ['nubank.com.br', 'nu.com.mx'] },
+  { id: 'mercadopago', name: 'Mercado Pago', names: ['mercado pago', 'mercadopago', 'mercado livre', 'mercado libre'], domains: ['mercadopago.com', 'mercadopago.com.br', 'mercadolivre.com.br', 'mercadolibre.com'] },
+  { id: 'ripple', name: 'Ripple', names: ['ripple labs', 'ripple team'], domains: ['ripple.com'] },
+  { id: 'opensea', name: 'OpenSea', names: ['opensea'], domains: ['opensea.io'] },
+  { id: 'bbva', name: 'BBVA', names: ['bbva'], domains: ['bbva.com', 'bbva.es', 'bbva.mx'] },
+  { id: 'caixabank', name: 'CaixaBank', names: ['caixabank', 'la caixa'], domains: ['caixabank.es', 'caixabank.com'] },
+  { id: 'standardchartered', name: 'Standard Chartered', names: ['standard chartered'], domains: ['sc.com'] },
+  { id: 'dbs', name: 'DBS Bank', names: ['dbs bank', 'posb'], domains: ['dbs.com', 'dbs.com.sg'] },
+  { id: 'maybank', name: 'Maybank', names: ['maybank'], domains: ['maybank.com', 'maybank2u.com.my'] },
+  { id: 'emiratesnbd', name: 'Emirates NBD', names: ['emirates nbd'], domains: ['emiratesnbd.com'] },
+  { id: 'alrajhi', name: 'Al Rajhi Bank', names: ['al rajhi', 'alrajhi'], domains: ['alrajhibank.com.sa'] },
+  { id: 'samba', name: 'Samba Financial Group', names: ['samba bank', 'samba financial', 'samba'], domains: ['samba.com'], ambiguous: true, context: ['bank', 'account', 'card', 'banking', 'customer'] },
+  { id: 'unionbankindia', name: 'Union Bank of India', names: ['union bank of india'], domains: ['unionbankofindia.co.in', 'unionbankofindia.bank.in'] },
+  { id: 'canarabank', name: 'Canara Bank', names: ['canara bank'], domains: ['canarabank.com', 'canarabank.in'] },
+  { id: 'indusind', name: 'IndusInd Bank', names: ['indusind'], domains: ['indusind.com'] },
+  { id: 'yesbank', name: 'YES Bank', names: ['yes bank'], domains: ['yesbank.in'] },
+  { id: 'idfcfirst', name: 'IDFC FIRST Bank', names: ['idfc first', 'idfc bank'], domains: ['idfcfirstbank.com'] },
+  { id: 'bankofindia', name: 'Bank of India', names: ['bank of india'], domains: ['bankofindia.co.in'] },
+  // ── Couriers & postal services ───────────────────────────────────────────
+  { id: 'tnt', name: 'TNT', names: ['tnt express', 'tnt'], domains: ['tnt.com'], ambiguous: true, context: ['shipment', 'parcel', 'delivery', 'tracking', 'express', 'consignment'] },
+  { id: 'sfexpress', name: 'SF Express', names: ['sf express', 'sfexpress'], domains: ['sf-express.com', 'sf-international.com'] },
+  { id: 'ems', name: 'EMS', names: ['ems tracking', 'ems parcel', 'express mail service'], domains: ['ems.post'] },
+  { id: 'dpd', name: 'DPD', names: ['dpd'], domains: ['dpd.com', 'dpd.co.uk', 'dpd.de'], ambiguous: true, context: ['parcel', 'delivery', 'shipment', 'tracking', 'driver'] },
+  { id: 'gls', name: 'GLS', names: ['gls parcel', 'gls'], domains: ['gls-group.eu', 'gls-group.com'], ambiguous: true, context: ['parcel', 'delivery', 'shipment', 'tracking'] },
+  { id: 'hermes', name: 'Evri / Hermes', names: ['evri', 'hermes parcel', 'myhermes'], domains: ['evri.com', 'myhermes.co.uk', 'hermesworld.com'] },
+  { id: 'postnl', name: 'PostNL', names: ['postnl'], domains: ['postnl.nl'] },
+  { id: 'laposte', name: 'La Poste', names: ['la poste', 'colissimo', 'chronopost'], domains: ['laposte.fr', 'colissimo.fr', 'chronopost.fr'] },
+  { id: 'correos', name: 'Correos', names: ['correos'], domains: ['correos.es'] },
+  { id: 'posteitaliane', name: 'Poste Italiane', names: ['poste italiane'], domains: ['poste.it'] },
+  { id: 'deutschepost', name: 'Deutsche Post', names: ['deutsche post'], domains: ['deutschepost.de', 'dhl.de'] },
+  { id: 'swisspost', name: 'Swiss Post', names: ['swiss post', 'die post'], domains: ['post.ch'] },
+  { id: 'japanpost', name: 'Japan Post', names: ['japan post'], domains: ['post.japanpost.jp', 'japanpost.jp'] },
+  { id: 'emiratespost', name: 'Emirates Post', names: ['emirates post'], domains: ['emiratespost.ae'] },
+  // ── Mail, hosting & identity platforms (IT-admin lures) ──────────────────
+  { id: 'cpanel', name: 'cPanel', names: ['cpanel', 'webmail cpanel'], domains: ['cpanel.net', 'cpanel.com'] },
+  { id: 'roundcube', name: 'Roundcube', names: ['roundcube'], domains: ['roundcube.net'] },
+  { id: 'zimbra', name: 'Zimbra', names: ['zimbra'], domains: ['zimbra.com'] },
+  { id: 'godaddy', name: 'GoDaddy', names: ['godaddy', 'go daddy'], domains: ['godaddy.com', 'secureserver.net'] },
+  { id: 'namecheap', name: 'Namecheap', names: ['namecheap'], domains: ['namecheap.com'] },
+  { id: 'aol', name: 'AOL', names: ['aol mail', 'aol'], domains: ['aol.com', 'aol.net'] },
+  { id: 'proton', name: 'Proton Mail', names: ['protonmail', 'proton mail'], domains: ['proton.me', 'protonmail.com', 'proton.ch'] },
+
   // ── Employers & recruitment (common job-scam lures) ──────────────────────
   { id: 'ltimindtree', name: 'LTIMindtree', names: ['ltimindtree', 'lti mindtree', 'mind tree', 'mindtree', 'larsen & toubro infotech'], domains: ['ltimindtree.com', 'mindtree.com', 'lntinfotech.com'] },
   { id: 'tcs', name: 'Tata Consultancy Services', names: ['tata consultancy services', 'tcs nqt', 'tcs ion', 'tcs'], domains: ['tcs.com', 'tcsion.com', 'tata.com'], ambiguous: true, context: ['tcs', 'tata', 'nqt', 'ion', 'hiring', 'offer', 'interview'] },
@@ -162,6 +252,8 @@ function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const SERVICE_WORDS = /\b(support|team|service|services|security|alert|alerts|account|accounts|billing|customer|help|helpdesk|notification|notifications|update|info|no-?reply|noreply|care|center|centre|id|store|pay|wallet|online|official|protection|renewal|subscription)\b/;
+
 function wordRe(alternatives: string[]): RegExp {
   return new RegExp(`(?:^|[^\\p{L}\\p{N}])(?:${alternatives.map(escapeRe).join('|')})(?=$|[^\\p{L}\\p{N}])`, 'iu');
 }
@@ -182,9 +274,86 @@ export function findBrands(text: string, strict: boolean): Brand[] {
   const out: Brand[] = [];
   for (const { brand, re, ctx } of NAME_PATTERNS) {
     if (!re.test(lower)) continue;
-    if (brand.ambiguous && !strict && !(ctx && ctx.test(lower))) continue;
+    if (brand.ambiguous) {
+      const hasContext = !!ctx && ctx.test(lower);
+      // In a display name an ambiguous brand ("Apple", "Norton") only counts when the name reads
+      // like a service account ("Apple Support", "Norton") rather than a person ("Edward Norton").
+      const serviceLike = strict && (lower.split(/\s+/).length <= 1 || SERVICE_WORDS.test(lower));
+      if (!hasContext && !serviceLike) continue;
+    }
     out.push(brand);
   }
+  return out;
+}
+
+/** Display names are often obfuscated: "American .Express", "Geek<>Squad®", "AppStore", "NeIflíx". */
+export function normalizeDisplayName(name: string): string {
+  return deobfuscate(name)
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^\p{L}\p{N}&+]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+// Visual skeleton for brand-name comparison (I/l/1, 0/o, rn/m …). Kept local to avoid a cycle.
+function nameSkeleton(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .replace(/rn/g, 'm')
+    .replace(/vv/g, 'w')
+    .replace(/[1|!i]/g, 'l')
+    .replace(/0/g, 'o')
+    .replace(/5/g, 's')
+    .replace(/3/g, 'e')
+    .replace(/4/g, 'a');
+}
+
+function editDistance(a: string, b: string): number {
+  const dp = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0] as number;
+    dp[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = dp[j] as number;
+      dp[j] = Math.min((dp[j] as number) + 1, (dp[j - 1] as number) + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[b.length] as number;
+}
+
+const FUZZY_NAMES: { brand: Brand; skel: string }[] = BRANDS.flatMap((b) =>
+  b.ambiguous ? [] : b.names.map((n) => ({ brand: b, skel: nameSkeleton(n) })).filter((x) => x.skel.length >= 6),
+);
+
+/**
+ * Brand claims in a sender display name, tolerant to punctuation, spacing, accents and homoglyph
+ * misspellings (edit distance ≤ 1 on the visual skeleton, same first letter).
+ */
+export function findBrandsInName(name: string): Brand[] {
+  if (!name) return [];
+  const norm = normalizeDisplayName(name);
+  const out = findBrands(norm, true);
+  const collapsed = nameSkeleton(norm);
+  const tokens = norm.split(' ').map(nameSkeleton).filter((t) => t.length >= 5);
+  for (const { brand, skel } of FUZZY_NAMES) {
+    if (out.includes(brand)) continue;
+    const hit =
+      collapsed.includes(skel) ||
+      tokens.some((t) => t !== skel && t[0] === skel[0] && Math.abs(t.length - skel.length) <= 1 && editDistance(t, skel) <= 1);
+    if (hit) out.push(brand);
+  }
+  return out;
+}
+
+/** Brands hidden in text whose words were split apart ("Lin ked i n Busi ne ss"). */
+export function findBrandsCollapsed(text: string): Brand[] {
+  const skel = nameSkeleton(text.slice(0, 3000));
+  const out: Brand[] = [];
+  for (const { brand, skel: s } of FUZZY_NAMES) if (!out.includes(brand) && skel.includes(s)) out.push(brand);
   return out;
 }
 

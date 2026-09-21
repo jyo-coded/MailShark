@@ -97,8 +97,13 @@ export function urlTemplate(u: URL, regDomain: string | null): string {
 }
 
 const LOGIN_WORDS = /(log-?in|sign-?in|verify|verification|secure|account|update|confirm|auth|password|webmail|wallet|unlock|recover|validate|billing|invoice|payment|kyc|suspend)/i;
-const DANGEROUS_DOWNLOAD = /\.(exe|scr|msi|bat|cmd|js|jse|vbs|vbe|hta|ps1|jar|iso|img|vhdx?|lnk|zip|rar|7z|apk|dmg|pkg|one|docm|xlsm|pptm|html?|svg)(?:$|\?)/i;
-const LOOKS_LIKE_URL = /\b((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,})(?:[/:?#]\S*)?$/i;
+const EXECUTABLE_DOWNLOAD = /\.(exe|scr|msi|bat|cmd|jse?|vbs|vbe|hta|ps1|jar|iso|img|vhdx?|lnk|apk|one|docm|xlsm|pptm|wsf|cpl)$/i;
+const ARCHIVE_DOWNLOAD = /\.(zip|rar|7z|gz|tgz|cab)$/i;
+// A tracker-style *subdomain* label ("click.brand-mail.com"); never matched against the registrable
+// label itself, so "email-verify.xyz" or "click-secure.top" are not excused.
+const TRACKER_HOST = /^(click|clicks|clickthru|clickthrough|track|tracking|trk|links?|lnk|email|e|em|mail|mailer|news|newsletter|go|r|t|url\d*|redirect|out|ea|ec|ct|cl)\d*\./i;
+const TRACKER_PATH = /\/(click|clickthru|clickthrough|track|trk|redirect|redir|r|c|l|ls|lt|ss|wf)(\/|\.php|\.asp|\?|$)|[?&](url|u|redirect|dest|destination|target|link)=http/i;
+const LOOKS_LIKE_URL =/\b((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,})(?:[/:?#]\S*)?$/i;
 
 function anchorTextDomain(text: string | null | undefined): string | null {
   if (!text) return null;
@@ -172,7 +177,8 @@ export function analyzeLinks(candidates: LinkCandidate[], intel: IntelProvider |
     if (info.tld && SUSPICIOUS_TLDS.has(info.tld.split('.').pop() as string)) bump('suspicious-tld', 1);
     if (info.subdomain && info.subdomain.split('.').length >= 4) bump('deep-subdomain', 1);
     if (url.length > 180) flags.push('long-url');
-    if (DANGEROUS_DOWNLOAD.test(u.pathname)) bump('file-download', 2);
+    if (EXECUTABLE_DOWNLOAD.test(u.pathname)) bump('file-download', 2);
+    else if (ARCHIVE_DOWNLOAD.test(u.pathname)) bump('archive-download', 1);
     if (u.pathname.toLowerCase().includes('/ipfs/') || host.includes('ipfs')) bump('ipfs', 2);
 
     const lookalike = detectLookalike(host);
@@ -193,7 +199,11 @@ export function analyzeLinks(candidates: LinkCandidate[], intel: IntelProvider |
 
     const textDomain = anchorTextDomain(cand.text);
     if (textDomain && info.regDomain && textDomain !== info.regDomain) {
-      if (ESP_TRACKING_DOMAINS.has(info.regDomain) || wrapper) flags.push('text-href-mismatch-tracking');
+      // Newsletter click-trackers ("click.example-mail.com/…", "…/clickthru?url=") rewrite every link;
+      // a mismatch through one of them is bookkeeping, not deception, unless the link is itself suspect.
+      const tracker =
+        ESP_TRACKING_DOMAINS.has(info.regDomain) || !!wrapper || (!!info.subdomain && TRACKER_HOST.test(host)) || TRACKER_PATH.test(u.pathname + u.search);
+      if (tracker && !lookalike && risk < 3) flags.push('text-href-mismatch-tracking');
       else bump('text-href-mismatch', 3);
     }
 

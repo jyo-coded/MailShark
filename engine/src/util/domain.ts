@@ -208,13 +208,12 @@ export const FORM_SERVICES = [
   'formstack.com', 'wufoo.com', 'surveymonkey.com', 'zohoforms.com', 'cognitoforms.com', 'formsite.com', '123formbuilder.com',
 ];
 
-/** TLDs with persistently high abuse rates in phishing research (Spamhaus / Interisle reports). */
+/** TLDs with persistently high phishing abuse rates (Spamhaus / Interisle / APWG reports). */
 export const SUSPICIOUS_TLDS = new Set([
   'zip', 'mov', 'top', 'xyz', 'icu', 'click', 'quest', 'cfd', 'sbs', 'rest', 'gq', 'tk', 'ml', 'cf', 'ga', 'buzz', 'cyou',
   'monster', 'bond', 'lol', 'mom', 'beauty', 'hair', 'skin', 'makeup', 'autos', 'boats', 'yachts', 'motorcycles', 'homes',
-  'support', 'live', 'online', 'site', 'website', 'fun', 'space', 'store', 'shop', 'work', 'today', 'digital', 'loan',
-  'win', 'bid', 'date', 'racing', 'download', 'stream', 'party', 'review', 'trade', 'accountant', 'science', 'men', 'kim',
-  'country', 'gdn', 'cam', 'uno', 'pw', 'su', 'best', 'run', 'ink', 'life', 'world', 'info', 'biz', 'ru', 'cn',
+  'loan', 'win', 'bid', 'date', 'racing', 'download', 'stream', 'party', 'review', 'trade', 'accountant', 'science', 'men',
+  'kim', 'country', 'gdn', 'cam', 'uno', 'pw', 'su', 'best', 'surf', 'help', 'hair', 'lat', 'bar', 'christmas', 'webcam',
 ]);
 
 /** Click-tracking / redirect domains operated by legitimate email service providers. */

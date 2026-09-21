@@ -1,6 +1,24 @@
 // Text helpers shared by the analyzers.
 
-export const ZERO_WIDTH_RE = /[​-‍⁠﻿­͏᠎]/g;
+export const ZERO_WIDTH_RE = /[​-‍⁠﻿­͏᠎]|[\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/gu;
+
+/** Invisible "tag" characters and variation selectors smuggled into names ("Ꮇ󠄹icrosoft"). */
+export const INVISIBLE_RE = /[​-‍⁠᠎]|[\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/u;
+
+/** Mathematical alphanumeric "fonts" (𝐏𝐋𝐄𝐀𝐒𝐄) used to slip words past filters. */
+export const STYLED_LETTERS_RE = /[\u{1D400}-\u{1D7FF}]/u;
+
+// Cherokee and other letters that render like Latin capitals.
+const EXOTIC_CONFUSABLES: Record<string, string> = {
+  Ꭺ: 'A', Ᏼ: 'B', Ꮯ: 'C', Ꭰ: 'D', Ꭼ: 'E', Ꮐ: 'G', Ꮋ: 'H', Ꭵ: 'i', Ꭻ: 'J', Ꮶ: 'K', Ꮮ: 'L', Ꮇ: 'M', Ꮲ: 'P', Ꭱ: 'R', Ꮪ: 'S', Ꭲ: 'T', Ꮩ: 'V', Ꮃ: 'W', Ꮓ: 'Z',
+};
+
+/** Strip invisible characters and fold exotic look-alike letters and styled fonts to plain ASCII. */
+export function deobfuscate(s: string): string {
+  let out = '';
+  for (const ch of s.replace(ZERO_WIDTH_RE, '')) out += EXOTIC_CONFUSABLES[ch] ?? ch;
+  return out.normalize('NFKC');
+}
 
 /** Decode bytes as Latin-1 so every byte maps to exactly one char (binary-safe). */
 export function latin1(bytes: Uint8Array, max = bytes.length): string {
@@ -66,7 +84,7 @@ export function stringEntropy(s: string): number {
 
 /** Lowercase, strip accents & zero-width chars, fold common leetspeak used to dodge keyword filters. */
 export function normalizeForMatching(s: string): string {
-  return s
+  return deobfuscate(s)
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .replace(ZERO_WIDTH_RE, '')

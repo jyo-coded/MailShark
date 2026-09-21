@@ -38,7 +38,13 @@ export interface LookalikeHit {
 }
 
 const MIN_LABEL = 4;
-const GENERIC_LABELS = new Set(['mail', 'email', 'login', 'secure', 'account', 'online', 'support', 'service', 'office', 'cloud', 'store', 'shop', 'app', 'apps', 'news', 'info', 'bank', 'pay', 'post', 'live', 'www', 'web', 'home', 'help', 'meta', 'visa', 'chase', 'steam', 'apple', 'slack', 'jio', 'stripe', 'indeed', 'upi', 'tcs', 'epfo']);
+// Labels that are ordinary words or common substrings of unrelated names ("shagmail" ⊃ "gmail").
+const GENERIC_LABELS = new Set([
+  'mail', 'email', 'login', 'secure', 'account', 'online', 'support', 'service', 'office', 'cloud', 'store', 'shop', 'app', 'apps',
+  'news', 'info', 'bank', 'pay', 'post', 'live', 'www', 'web', 'home', 'help', 'meta', 'visa', 'chase', 'steam', 'apple', 'slack',
+  'jio', 'stripe', 'indeed', 'upi', 'tcs', 'epfo', 'gmail', 'googlemail', 'hotmail', 'msn', 'windows', 'xbox', 'force',
+  'booking', 'target', 'citizens', 'discover', 'regions', 'united', 'national', 'ally',
+]);
 
 export function detectLookalike(hostRaw: string): LookalikeHit | null {
   const info = hostInfo(hostRaw);
