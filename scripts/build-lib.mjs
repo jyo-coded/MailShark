@@ -48,6 +48,7 @@ export function copyStatic(out) {
     cpSync(join(root, 'node_modules', pkgName, 'files', file), join(fontDir, dest));
   }
   cpSync(join(root, 'node_modules', '@fontsource-variable', 'geist', 'LICENSE'), join(fontDir, 'LICENSE-Geist.txt'));
+  cpSync(join(root, 'node_modules', '@fontsource-variable', 'geist-mono', 'LICENSE'), join(fontDir, 'LICENSE-GeistMono.txt'));
   const css = ['fonts.css', 'tokens.css', 'components.css', 'dissector.css', 'pages.css'].map((f) => readFileSync(join(src, 'ui', 'styles', f), 'utf8')).join('\n');
   writeFileSync(join(out, 'app.css'), css);
 }

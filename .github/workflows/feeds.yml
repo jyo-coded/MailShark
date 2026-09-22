@@ -1,0 +1,62 @@
+# Compiles public threat lists into Bloom filters and publishes them to the `feeds` branch, which the
+# add-on downloads from raw.githubusercontent.com/jyo-coded/MailShark/feeds/v1/. The branch holds a
+# single commit (force-pushed), so the repository does not grow with every refresh.
+name: Threat feeds
+
+on:
+  schedule:
+    - cron: '17 3 * * *' # daily, 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: feeds
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install "tldextract>=5.1" pytest
+      - name: Test the compiler
+        run: python -m pytest -q feeds
+      - name: Build feeds
+        run: python feeds/build_feeds.py --out "$RUNNER_TEMP/feeds-out"
+      - name: Sanity-check the output
+        run: |
+          python - "$RUNNER_TEMP/feeds-out/v1" <<'EOF'
+          import hashlib, json, sys
+          from pathlib import Path
+          out = Path(sys.argv[1])
+          man = json.loads((out / "manifest.json").read_text())
+          assert man["version"] == 1 and man["lists"], "empty manifest"
+          for l in man["lists"]:
+              data = (out / l["file"]).read_bytes()
+              assert hashlib.sha256(data).hexdigest() == l["sha256"], l["name"]
+              assert len(data) * 8 >= l["m"] and 0 < l["k"] <= 32, l["name"]
+              assert len(data) <= 12 * 1024 * 1024, f"{l['name']} exceeds the add-on's 12 MiB limit"
+              print(f"{l['name']}: {l['count']:,} hosts, {len(data) / 1024:.0f} KiB")
+          EOF
+      - name: Publish to the feeds branch
+        env:
+          OUT: ${{ runner.temp }}/feeds-out
+        run: |
+          cd "$OUT"
+          cat > README.md <<'EOF'
+          # MailShark threat feeds
+
+          Generated daily by `.github/workflows/feeds.yml` on `main`; do not edit. Each list is a Bloom
+          filter (see `feeds/build_feeds.py`). Sources and licences are recorded in `v1/manifest.json`.
+          EOF
+          git init -q -b feeds
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Threat feeds $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" feeds:feeds

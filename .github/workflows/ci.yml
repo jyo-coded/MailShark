@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  extension:
+    name: Extension (typecheck, tests, build, lint, package)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run lint:ext
+      - name: Package and lint the release zip
+        run: npm run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mailshark-${{ github.sha }}
+          path: artifacts/*.zip
+          retention-days: 30
+
+  python:
+    name: Lab and feed builder (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: lab/pyproject.toml
+      - run: python -m pip install -e "lab[test]"
+      - run: python -m pytest -q lab/tests feeds
+
+  e2e:
+    name: Real Firefox end-to-end (Selenium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: python -m pip install selenium
+      - name: Run the add-on in headless Firefox against the Gmail mock
+        run: |
+          firefox --version
+          python tests/e2e_firefox.py --browser "$(command -v firefox)" --shots artifacts/e2e ${GECKOWEBDRIVER:+--geckodriver "$GECKOWEBDRIVER/geckodriver"}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots-${{ github.sha }}
+          path: artifacts/e2e
+          retention-days: 14
