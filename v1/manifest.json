@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "generated": "2026-10-03T09:12:34+00:00",
+  "allowlist": "Tranco top 100000 (https://tranco-list.eu)",
+  "lists": [
+    {
+      "name": "phishing-database",
+      "file": "phishing-database.bloom",
+      "m": 11269760,
+      "k": 20,
+      "count": 391921,
+      "sha256": "2ba6a58a946f2ef0f54e62b7c41d1a0ebd50aba4d01b021e39469b98f5f8836d",
+      "updated": "2026-10-03T09:12:34+00:00",
+      "source": "https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+      "license": "MIT, Phishing.Database (Mitchell Krog et al.)"
+    },
+    {
+      "name": "urlhaus",
+      "file": "urlhaus.bloom",
+      "m": 10848,
+      "k": 20,
+      "count": 377,
+      "sha256": "804977ce20a7ba9ebf77edcdd64c8022ee106706f7a83db1913cadf5359bd10c",
+      "updated": "2026-10-03T09:12:34+00:00",
+      "source": "https://urlhaus.abuse.ch/downloads/hostfile/",
+      "license": "abuse.ch URLhaus terms of use (https://urlhaus.abuse.ch/api/)"
+    }
+  ]
+}
