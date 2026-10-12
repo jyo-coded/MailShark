@@ -6,8 +6,10 @@ import type {
   Category,
   Confidence,
   ContentAnalysis,
+  DkimVerification,
   EspInfo,
   Finding,
+  HeaderForensics,
   HtmlAnalysis,
   IntelProvider,
   LinkAnalysis,
@@ -18,6 +20,7 @@ import type {
   Verdict,
 } from './types';
 import { brandById, isBrandDomain } from './data/brands';
+import { orgDomain } from './util/domain';
 import { INVISIBLE_RE, STYLED_LETTERS_RE, truncate } from './util/text';
 
 export const BIAS = -2.6;
@@ -26,6 +29,8 @@ export const CAUTION_AT = 35;
 
 const CATEGORY_CAP: Record<Category, number> = {
   sender: 4.5, auth: 3, route: 1.5, links: 5, content: 3.5, html: 3.5, attachments: 6, structure: 2.5, intel: 5, campaign: 2.5,
+  // Integrity findings describe the evidence copy, not the sender's intent: reported, never scored.
+  integrity: 0,
 };
 const TRUST_FLOOR = -2.5;
 
@@ -46,12 +51,43 @@ export interface FindingsInput {
   subject: string;
   intel: IntelProvider | null | undefined;
   senderSeenCount: number | null | undefined;
+  dkim?: DkimVerification[];
+  forensics?: HeaderForensics | null;
 }
 
 const BRAND_INTENTS = new Set(['credential', 'payment', 'delivery', 'document', 'tax', 'callback', 'reward', 'crypto', 'mfa']);
 
-function f(id: string, category: Category, severity: Severity, weight: number, title: string, detail: string, evidence?: Finding['evidence']): Finding {
-  return evidence && evidence.length ? { id, category, severity, weight, title, detail, evidence } : { id, category, severity, weight, title, detail };
+function f(id: string, category: Category, severity: Severity, weight: number, title: string, detail: string, evidence?: Finding['evidence'], refs?: string[]): Finding {
+  const out: Finding = { id, category, severity, weight, title, detail };
+  if (evidence && evidence.length) out.evidence = evidence;
+  if (refs && refs.length) out.refs = refs;
+  return out;
+}
+
+// Component references for findings whose source location is fixed by their id.
+const FIXED_REFS: [RegExp, string[]][] = [
+  [/^sender\.(reply-to|freemail)/, ['header:Reply-To', 'header:From']],
+  [/^sender\./, ['header:From']],
+  [/^auth\./, ['header:Authentication-Results']],
+  [/^dkim\./, ['header:DKIM-Signature', 'body']],
+  [/^route\.(origin|helo|timestamp|date-skew)/, ['header:Received', 'header:Date']],
+  [/^route\.(esp|mass-mailer)/, ['header:X-Mailer', 'header:Received']],
+  [/^route\.(authenticated-sender|script-sender|originating-client)/, ['header:X-*']],
+  [/^route\.mailing-list/, ['header:List-Id']],
+  [/^content\.(homoglyph-subject|personalized-subject|fake-reply|styled-letters)/, ['header:Subject']],
+  [/^content\./, ['header:Subject', 'body:text']],
+  [/^html\./, ['body:html']],
+  [/^structure\./, ['mime']],
+  [/^intel\.sender-domain/, ['header:From']],
+];
+
+function attachRefs(findings: Finding[]): Finding[] {
+  for (const fi of findings) {
+    if (fi.refs) continue;
+    const hit = FIXED_REFS.find(([re]) => re.test(fi.id));
+    if (hit) fi.refs = hit[1];
+  }
+  return findings;
 }
 
 function brandName(id: string | null): string {
@@ -148,6 +184,13 @@ export function buildFindings(x: FindingsInput): Finding[] {
 
   // ── Authentication ──
   const a = x.auth;
+  // Results we cannot attribute to the receiving organisation may have been written by the sender.
+  const trustScale = a.source === 'trusted' ? 1 : 0.3;
+  if (a.source === 'topmost') {
+    out.push(f('auth.unverified-results', 'auth', 'info', 0, 'Authentication results of unverified origin',
+      'Authentication-Results headers are present, but none can be attributed to the receiving organisation, so their verdicts are reported but not relied on.',
+      a.authServId ? [{ label: 'Reported by', value: a.authServId, mono: true }] : undefined));
+  }
   if (a.source === 'none') {
     out.push(f('auth.none', 'auth', 'info', 0, 'No authentication results', 'This copy of the message carries no SPF/DKIM/DMARC verdicts from a receiving server, so the sender cannot be verified.'));
   } else {
@@ -161,7 +204,7 @@ export function buildFindings(x: FindingsInput): Finding[] {
     else if (a.compauth === 'fail') out.push(f('auth.compauth-fail', 'auth', 'high', 1.8, 'Microsoft composite authentication failed', 'Exchange Online could not verify that this message comes from the sender it claims.', ev));
     else if ((a.spf === 'fail' || a.spf === 'softfail') && a.dkim !== 'pass') out.push(f('auth.spf-fail', 'auth', 'medium', 1.0, 'Sent from a server the domain does not authorize (SPF)', 'The sending server is not on the sender domain\'s list of allowed mail servers, and no valid DKIM signature makes up for it.', ev));
     else if (a.dkim === 'fail' && a.spf !== 'pass') out.push(f('auth.dkim-fail', 'auth', 'medium', 0.8, 'Broken DKIM signature', 'The cryptographic signature does not match: the message was altered or forged.', ev));
-    else if (a.dmarc === 'pass') out.push(f('auth.dmarc-pass', 'auth', 'info', -0.6, 'Sender domain verified (DMARC pass)', `${a.headerFrom ?? 'The From domain'} authorized this message.`, ev));
+    else if (a.dmarc === 'pass') out.push(f('auth.dmarc-pass', 'auth', 'info', Math.round(-0.6 * trustScale * 100) / 100, 'Sender domain verified (DMARC pass)', `${a.headerFrom ?? 'The From domain'} authorized this message.`, ev));
     else if (a.spfAligned === false && a.dkimAligned === false) out.push(f('auth.unaligned', 'auth', 'low', 0.4, 'Authentication does not cover the visible sender', 'SPF/DKIM passed for a different domain than the one shown in From, so the From address itself is unverified.', ev));
   }
 
@@ -181,7 +224,8 @@ export function buildFindings(x: FindingsInput): Finding[] {
   const anchorLinks = x.links.filter((l) => l.sources.some((s) => s === 'html-anchor' || s === 'text' || s === 'qr' || s === 'attachment' || s === 'html-form'));
   const addLink = (id: string, severity: Severity, weight: number, title: string, detail: string, links: LinkAnalysis[]): void => {
     if (!links.length) return;
-    out.push(f(id, 'links', severity, weight, title, detail, links.slice(0, 4).map((l) => ({ label: l.displayText ? truncate(l.displayText, 40) : 'Link', value: truncate(l.url, 160), mono: true }))));
+    out.push(f(id, 'links', severity, weight, title, detail, links.slice(0, 4).map((l) => ({ label: l.displayText ? truncate(l.displayText, 40) : 'Link', value: truncate(l.url, 160), mono: true })),
+      links.slice(0, 20).map((l) => `link[${x.links.indexOf(l)}]`)));
   };
   addLink('links.threat-intel', 'critical', 4.0, 'Link to a known malicious site', 'A link points to a domain listed on a public threat-intelligence feed.', anchorLinks.filter((l) => l.intelHit));
   addLink('links.lookalike', 'critical', 3.0, 'Link to a look-alike domain', 'A link imitates a real brand domain with swapped or extra characters.', anchorLinks.filter((l) => l.flags.includes('lookalike-homoglyph') || l.flags.includes('lookalike-typosquat')));
@@ -276,21 +320,22 @@ export function buildFindings(x: FindingsInput): Finding[] {
   }
 
   // ── Attachments ──
-  for (const at of x.attachments) {
+  for (const [ai, at] of x.attachments.entries()) {
     const has = (...fl: string[]): boolean => fl.some((q) => at.flags.includes(q));
     const ev = [{ label: 'File', value: at.filename }, { label: 'Real type', value: at.detectedType }, { label: 'SHA-256', value: at.sha256, mono: true }];
+    const aref = [`attachment[${ai}]`];
     if (has('executable', 'archive-executable', 'disk-image', 'archive-disk-image', 'double-extension', 'rtlo-filename', 'padded-filename'))
-      out.push(f(`attachments.executable:${at.sha256.slice(0, 8)}`, 'attachments', 'critical', 3.5, `Dangerous file: ${truncate(at.filename, 48)}`, 'This attachment can run code on your computer (executable, disk image or disguised extension).', ev));
+      out.push(f(`attachments.executable:${at.sha256.slice(0, 8)}`, 'attachments', 'critical', 3.5, `Dangerous file: ${truncate(at.filename, 48)}`, 'This attachment can run code on your computer (executable, disk image or disguised extension).', ev, aref));
     else if (has('html-credential-form', 'html-smuggling-script'))
-      out.push(f(`attachments.html-phish:${at.sha256.slice(0, 8)}`, 'attachments', 'critical', 3.2, `Attached web page is a phishing kit: ${truncate(at.filename, 40)}`, 'The HTML/SVG attachment contains a login form or code that assembles a hidden payload (HTML smuggling).', ev));
+      out.push(f(`attachments.html-phish:${at.sha256.slice(0, 8)}`, 'attachments', 'critical', 3.2, `Attached web page is a phishing kit: ${truncate(at.filename, 40)}`, 'The HTML/SVG attachment contains a login form or code that assembles a hidden payload (HTML smuggling).', ev, aref));
     else if (has('office-macros', 'office-remote-template', 'office-dde', 'rtf-embedded-object', 'pdf-autorun-script'))
-      out.push(f(`attachments.active-content:${at.sha256.slice(0, 8)}`, 'attachments', 'high', 2.5, `Document with active content: ${truncate(at.filename, 40)}`, `Contains ${at.flags.filter((q) => /macro|template|dde|object|autorun/.test(q)).join(', ')}: document-based malware.`, ev));
+      out.push(f(`attachments.active-content:${at.sha256.slice(0, 8)}`, 'attachments', 'high', 2.5, `Document with active content: ${truncate(at.filename, 40)}`, `Contains ${at.flags.filter((q) => /macro|template|dde|object|autorun/.test(q)).join(', ')}: document-based malware.`, ev, aref));
     else if (has('macro-enabled-office', 'onenote', 'type-mismatch', 'encrypted-archive', 'html-attachment', 'svg-attachment', 'pdf-javascript', 'pdf-launch', 'archive-html', 'archive-macro-office', 'html-redirect', 'html-form'))
-      out.push(f(`attachments.risky:${at.sha256.slice(0, 8)}`, 'attachments', 'high', 1.7, `Risky attachment: ${truncate(at.filename, 48)}`, `Flags: ${at.flags.join(', ')}.`, ev));
+      out.push(f(`attachments.risky:${at.sha256.slice(0, 8)}`, 'attachments', 'high', 1.7, `Risky attachment: ${truncate(at.filename, 48)}`, `Flags: ${at.flags.join(', ')}.`, ev, aref));
     else if (has('qr-code'))
-      out.push(f(`attachments.qr:${at.sha256.slice(0, 8)}`, 'attachments', 'medium', 1.2, 'Image contains a QR code', `The QR code leads to ${truncate(at.qr ?? 'an unknown target', 80)}: QR codes move you to your phone, outside company protection ("quishing").`, [{ label: 'Decoded', value: at.qr ?? '', mono: true }]));
+      out.push(f(`attachments.qr:${at.sha256.slice(0, 8)}`, 'attachments', 'medium', 1.2, 'Image contains a QR code', `The QR code leads to ${truncate(at.qr ?? 'an unknown target', 80)}: QR codes move you to your phone, outside company protection ("quishing").`, [{ label: 'Decoded', value: at.qr ?? '', mono: true }], aref));
     else if (has('pdf-link-lure', 'uninspectable-archive', 'nested-archive', 'calendar-links'))
-      out.push(f(`attachments.note:${at.sha256.slice(0, 8)}`, 'attachments', 'low', 0.5, `Attachment worth a second look: ${truncate(at.filename, 40)}`, `Flags: ${at.flags.join(', ')}.`, ev));
+      out.push(f(`attachments.note:${at.sha256.slice(0, 8)}`, 'attachments', 'low', 0.5, `Attachment worth a second look: ${truncate(at.filename, 40)}`, `Flags: ${at.flags.join(', ')}.`, ev, aref));
   }
 
   // ── Structure ──
@@ -311,13 +356,98 @@ export function buildFindings(x: FindingsInput): Finding[] {
     out.push(f('route.mass-mailer', 'route', 'medium', 0.8, 'Sent by a mass-mailing script', `X-Mailer "${truncate(x.xMailer, 60)}" is common on compromised web servers and spam kits.`));
   }
 
+  // ── DKIM (verified by this engine) ──
+  const sigs = x.dkim ?? [];
+  const fromOrg = from?.orgDomain ?? '';
+  const modified = sigs.filter((d) => d.bodyHash === 'fail');
+  if (modified.length) {
+    const atDelivery = modified.filter((d) => a.source === 'trusted' && a.dkimDomains.some((dd) => orgDomain(dd) === orgDomain(d.domain)));
+    const ev = modified.slice(0, 3).map((d) => ({ label: `d=${d.domain} s=${d.selector}`, value: `body hash mismatch (${d.canonicalization})`, mono: true }));
+    if (atDelivery.length) out.push(f('dkim.modified-after-delivery', 'integrity', 'medium', 0, 'This copy was modified after delivery',
+      `The receiving server verified the ${atDelivery[0]?.domain} DKIM signature at delivery, but the body of this evidence copy no longer matches the signed hash.`, ev));
+    else out.push(f('dkim.body-modified', 'integrity', 'low', 0, 'Body changed after it was signed',
+      'The body no longer matches the DKIM body hash. Lists, gateways and mailbox processing often do this; it means the signature cannot vouch for this body.', ev));
+  }
+  const appended = sigs.filter((d) => d.bodyBeyondLimit && d.bodyHash === 'pass');
+  if (appended.length) out.push(f('dkim.body-appended', 'auth', 'high', 1.8, 'Content was appended after signing',
+    `The ${appended[0]?.domain} signature covers only the first ${appended[0]?.bodyLengthLimit} bytes of the body; everything after that was added later and is not vouched for by the signer.`,
+    [{ label: 'Signed length (l=)', value: String(appended[0]?.bodyLengthLimit), mono: true }]));
+  const replay = sigs.find((d) => d.bodyHash === 'pass' && d.signatureAgeAtReceiptSec !== null && d.signatureAgeAtReceiptSec > 3 * 86_400);
+  if (replay) {
+    const notForRecipient = replay.recipientInSignedHeaders === false;
+    const days = Math.round((replay.signatureAgeAtReceiptSec as number) / 86_400);
+    out.push(f('dkim.replay-suspected', 'auth', notForRecipient ? 'high' : 'medium', notForRecipient ? 1.6 : 0.8, 'Signed message re-sent long after signing (possible DKIM replay)',
+      `The ${replay.domain} signature was created ${days} days before this delivery${notForRecipient ? ', and the signed To/Cc headers do not name this recipient' : ''}. Replaying genuinely signed mail lets attackers borrow the signer's reputation.`,
+      [{ label: 'Signed at (t=)', value: replay.signedAt ? new Date(replay.signedAt).toISOString() : 'n/a', mono: true }]));
+  }
+  const verified = sigs.filter((d) => d.signature === 'pass' && d.bodyHash === 'pass' && !d.bodyBeyondLimit);
+  const alignedVerified = verified.find((d) => fromOrg && orgDomain(d.domain) === fromOrg);
+  if (alignedVerified && !(a.source === 'trusted' && a.dmarc === 'pass')) {
+    out.push(f('dkim.signature-verified', 'auth', 'info', -0.6, `DKIM signature verified for ${alignedVerified.domain}`,
+      `The signature verifies against the key ${alignedVerified.selector}._domainkey.${alignedVerified.domain} publishes today, and it is aligned with the From domain.`,
+      [{ label: 'Key', value: `${alignedVerified.selector}._domainkey.${alignedVerified.domain} (${alignedVerified.keyBits ?? '?'} bits)`, mono: true }]));
+  }
+  const invalid = sigs.filter((d) => d.signature === 'fail' && d.bodyHash === 'pass');
+  if (invalid.length) out.push(f('dkim.signature-invalid', 'auth', 'medium', 0.8, 'DKIM signature does not verify',
+    `The ${invalid[0]?.domain} signature fails against the key currently published: signed headers were altered after signing, or the key was replaced.`,
+    [{ label: 'Signature', value: `d=${invalid[0]?.domain} s=${invalid[0]?.selector}`, mono: true }]));
+  if (sigs.some((d) => d.bodyHash !== 'error' && !d.coversFrom)) out.push(f('dkim.from-unsigned', 'integrity', 'low', 0, 'A DKIM signature does not cover the From header',
+    'RFC 6376 requires the From header to be signed; this signature cannot vouch for the visible sender.'));
+  if (sigs.some((d) => d.algorithm === 'rsa-sha1' || (d.keyBits !== null && d.keyBits < 1024))) out.push(f('dkim.weak-crypto', 'integrity', 'info', 0, 'Weak DKIM cryptography',
+    'A signature uses SHA-1 or an RSA key shorter than 1024 bits (deprecated by RFC 8301); such signatures can be forged.'));
+
+  // ── Header forensics ──
+  const fx = x.forensics;
+  if (fx) {
+    if (fx.injectedAuthResults.length) out.push(f('auth.injected-results', 'auth', 'high', 2.0, 'Fake authentication results inserted by the sender',
+      fx.injectedAuthResults[0]?.reason ?? 'An Authentication-Results header was not written by the receiving server.',
+      fx.injectedAuthResults.slice(0, 2).map((r) => ({ label: r.authServId || 'Authentication-Results', value: truncate(r.value, 160), mono: true }))));
+    if (fx.heloMismatch) {
+      const hm = fx.heloMismatch;
+      out.push(hm.verified
+        ? f('route.helo-impersonation', 'route', 'medium', 1.0, 'Sending server lied about its name',
+            `It introduced itself as ${hm.helo}, but the receiving server resolved its address ${hm.ip} to ${hm.rdns}.`,
+            [{ label: 'HELO', value: hm.helo, mono: true }, { label: 'Reverse DNS', value: hm.rdns ?? 'none', mono: true }])
+        : f('route.helo-impersonation', 'route', 'low', 0.3, 'Sending server claims a well-known name without reverse DNS',
+            `It introduced itself as ${hm.helo}, but its address ${hm.ip} has no reverse DNS to confirm it.`,
+            [{ label: 'HELO', value: hm.helo, mono: true }]));
+    }
+    const o = fx.originating;
+    if (o.authenticatedSender && from && orgDomain(o.authenticatedSender.split('@')[1] ?? '') !== from.orgDomain) {
+      out.push(f('route.authenticated-sender-mismatch', 'route', 'medium', 1.0, 'Sent through a different authenticated account',
+        `The sending provider recorded that ${o.authenticatedSender} authenticated to send this message, which claims to be from ${from.address}.`,
+        [{ label: 'Authenticated as', value: o.authenticatedSender, mono: true }, ...(o.hostingServer ? [{ label: 'Hosting server', value: o.hostingServer, mono: true }] : [])]));
+    }
+    if (o.sendingScript) {
+      const lureish = !!x.sender.impersonatedBrand || (!!x.content.intent && BRAND_INTENTS.has(x.content.intent));
+      out.push(f('route.script-sender', 'route', lureish ? 'medium' : 'low', lureish ? 1.0 : 0.4, 'Generated by a web script',
+        `The provider recorded the script that sent this message (${o.scriptHeader}): usually a contact form, or a compromised website.`,
+        [{ label: o.scriptHeader ?? 'Script', value: truncate(o.sendingScript, 160), mono: true }]));
+    }
+    if (o.clientIp) out.push(f('route.originating-client', 'route', 'info', 0, `Composed from ${o.clientIp}`,
+      `The sending provider recorded the client address that submitted the message (${o.clientIpHeader}).`,
+      [{ label: o.clientIpHeader ?? 'Client IP', value: o.clientIp, mono: true }]));
+    const ta = fx.timestampAnomalies.filter((t) => t.involvesUnverifiedHop);
+    if (ta.length) out.push(f('route.timestamp-anomaly', 'route', 'low', 0.4, 'Delivery timestamps go backwards',
+      `A relay claims to have handled the message ${Math.round(Math.abs(ta[0]?.deltaSec ?? 0) / 3600)} h before the previous one: trace headers on the sender side are likely forged.`));
+  }
+
+  // ── Wallets ──
+  const wallets = x.content.wallets ?? [];
+  if (wallets.length) {
+    const money = x.content.intents.some((i) => (i.id === 'extortion' || i.id === 'crypto' || i.id === 'payment') && i.score >= 1.5);
+    out.push(f('content.crypto-wallet', 'content', money ? 'high' : 'low', money ? 1.6 : 0.3, money ? 'Demands payment to a cryptocurrency wallet' : 'Contains a cryptocurrency address',
+      money ? 'Extortion and payment lures tell victims to pay to a wallet; the address is a strong indicator of the operator.' : 'A cryptocurrency address appears in the text.',
+      wallets.slice(0, 3).map((w) => ({ label: 'Wallet', value: w, mono: true })), ['body:text']));
+  }
+
   // ── Threat intel on the sender ──
   if (x.intel && from) {
     const hit = x.intel.lookupDomain(from.domain) ?? x.intel.lookupDomain(from.orgDomain);
     if (hit) out.push(f('intel.sender-domain', 'intel', 'critical', 4.0, 'Sender domain is on a threat feed', `${from.orgDomain} appears in ${hit}.`));
   }
 
-  return out;
+  return attachRefs(out);
 }
 
 export interface ScoreResult {

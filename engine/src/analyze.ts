@@ -10,12 +10,17 @@ import { analyzeLinks, extractTextUrls, type LinkCandidate } from './analyzers/l
 import { analyzeContent } from './analyzers/content';
 import { analyzeAttachment, type RawAttachment } from './analyzers/attachments';
 import { detectEsp } from './analyzers/esp';
+import { verifyDkim } from './analyzers/dkim';
+import { analyzeHeaderForensics } from './analyzers/forensics';
+import { extractIocs } from './iocs';
+import { assessCoverage } from './coverage';
+import { classify } from './classify';
 import { buildFindings, scoreFindings, sortFindings } from './score';
 import { buildFingerprint } from './fingerprint';
 import { md5Hex, sha1Hex, sha256Hex } from './util/hash';
 import { jaccard, latin1, latin1ToBytes, tokenize } from './util/text';
 
-export const ENGINE_VERSION = '1.0.0';
+export const ENGINE_VERSION = '1.1.0';
 
 const SINGLE_INSTANCE = ['from', 'sender', 'reply-to', 'to', 'cc', 'subject', 'date', 'message-id', 'in-reply-to', 'references', 'content-type', 'mime-version'];
 
@@ -106,6 +111,21 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
     (receivedFor ? parseAddressList(receivedFor)[0] : undefined) ??
     parseAddressList(hv('to'))[0] ??
     null;
+  mark('identity', t);
+
+  // ── DKIM: body hash offline, header signature when the host supplies a key resolver ──
+  t = performance.now();
+  const trustedStamps = route.hops.filter((h) => h.trusted && h.timestamp !== null).map((h) => h.timestamp as number);
+  const receivedAt = trustedStamps.length ? Math.min(...trustedStamps) : (route.hops[route.hops.length - 1]?.timestamp ?? null);
+  let dkim: Awaited<ReturnType<typeof verifyDkim>> = [];
+  try {
+    dkim = await verifyDkim({ raw: rawStr, recipients: recipient ? [recipient.address] : [], receivedAt, resolveKey: options.dkimKeyResolver ?? null });
+  } catch {
+    dkim = [];
+  }
+  mark('dkim', t);
+  t = performance.now();
+  const selfVerifiedDkimDomains = dkim.filter((d) => d.signature === 'pass' && d.bodyHash === 'pass' && !d.bodyBeyondLimit).map((d) => d.domain);
   const sender = analyzeSender({
     fromRaw: hv('from'),
     replyToRaw: hv('reply-to'),
@@ -115,11 +135,13 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
     subject,
     senderSeenCount: options.context?.senderSeenCount,
     recipient,
+    selfVerifiedDkimDomains,
   });
   // Discussion lists (Mailman, Google Groups, LISTSERV…) legitimately rewrite Reply-To and thread
   // loosely; they announce themselves with list headers.
   const isList = !!(hv('list-id') || hv('list-post') || hv('x-mailman-version') || hv('x-beenthere') || hv('mailing-list') || /\blist\b/i.test(hv('precedence') ?? ''));
-  mark('identity', t);
+  const forensics = analyzeHeaderForensics({ headers, route, trustedAuthServId: auth.source === 'trusted' ? auth.authServId : null, authSource: auth.source, fromDomain });
+  mark('sender', t);
 
   // ── Body ──
   t = performance.now();
@@ -229,6 +251,8 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
       subject,
       intel: options.intel,
       senderSeenCount: options.context?.senderSeenCount,
+      dkim,
+      forensics,
     }),
   );
   const scored = scoreFindings(findings, auth.source, bodyText.length);
@@ -254,6 +278,34 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
 
   const { claimed: _claimed, ...senderPublic } = sender;
   void _claimed;
+
+  // ── Indicators, evidence coverage, classification ──
+  const iocs = extractIocs({
+    sender: senderPublic,
+    recipient: recipient?.address ?? null,
+    route,
+    links,
+    attachments,
+    content,
+    dkim,
+    forensics,
+    messageId: hv('message-id'),
+    esp,
+  });
+  const coverage = assessCoverage({
+    headerCount: headers.length,
+    hasFrom: !!sender.from?.address,
+    malformedHeaderLines: malformed,
+    route,
+    auth,
+    dkimBodyVerified: dkim.some((d) => d.bodyHash === 'pass'),
+    bodyTextChars: bodyText.replace(/\s+/g, '').length,
+    html: htmlRes.analysis,
+    structure,
+    links,
+    attachments,
+  });
+  const classification = classify(scored.score, findings, coverage, options.thresholds);
   timings['total'] = Math.round((performance.now() - t0) * 10) / 10;
   return {
     schema: REPORT_SCHEMA,
@@ -283,6 +335,11 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
     headers: toHeaderEntries(headers).slice(0, 400),
     fingerprint,
     timings,
+    dkim,
+    forensics,
+    iocs,
+    coverage,
+    classification,
   };
 }
 

@@ -4,6 +4,7 @@ import type { ContentAnalysis } from '../types';
 import { ATTACHMENT_INSTRUCTIONS, EN_STOPWORDS, GENERIC_GREETINGS, INTENTS, URGENCY } from '../data/lexicon';
 import { findBrands, findBrandsCollapsed } from '../data/brands';
 import { collapseWs, hasMixedScriptWord, normalizeForMatching, scriptsOf, templatize, tokenize, truncate } from '../util/text';
+import { findWallets } from '../iocs';
 
 function phraseRe(p: string): RegExp {
   // Phrases get the same normalization as the text (accents folded), so "contraseña" matches.
@@ -134,5 +135,6 @@ export function analyzeContent(input: ContentInputs): ContentAnalysis {
     splitWords,
     attachmentInstructions: attachmentInstruction,
     textPreview: truncate(collapseWs(input.text), 280),
+    wallets: findWallets(input.text).map((w) => w.value),
   };
 }
