@@ -25,7 +25,7 @@ Most phishing protection answers one question: *"is this link on a blocklist?"* 
 
 It explains what it finds in plain language. It also remembers what it has seen, so different-looking emails from the **same campaign** are linked even after their domains, senders, links and files have been rotated.
 
-Everything runs inside your browser. MailShark has no server and no account, and it sends no data anywhere.
+Everything runs inside your browser. The add-on has no server and no account, and it sends no data anywhere.
 
 ## What you get
 
@@ -114,6 +114,17 @@ node scripts/preview.mjs   # UI preview on a Gmail mock at http://localhost:5178
 - **Reproducible build:** see [docs/BUILDING.md](docs/BUILDING.md).
 - **Architecture:** see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
+## Forensic platform (self-hosted)
+
+For investigations beyond one inbox there is also a self-hosted web platform built on the same engine:
+- batch intake of `.eml`, `.emlx`, `.mbox` and Outlook `.msg` evidence (100 files per batch), hashed and preserved at intake
+- documented findings in a packet-analyser style workspace
+- campaign correlation inside a case, and intelligence matching against locally synchronised feeds
+- an interactive investigation graph
+- JSON / Markdown / DOCX reports
+
+It is separate from the add-on: the add-on neither needs it nor talks to it. See [docs/platform/README.md](docs/platform/README.md) to run it, and [docs/platform/VALIDATION.md](docs/platform/VALIDATION.md) for what has and has not been validated.
+
 ## Repository
 
 | Path | |
@@ -122,9 +133,10 @@ node scripts/preview.mjs   # UI preview on a Gmail mock at http://localhost:5178
 | `extension/` | The Firefox add-on: background page, Gmail content script, Lab, popup, welcome, design system |
 | `fixtures/eml/` | Test emails (synthetic, safe) |
 | `feeds/` | Threat-feed compiler (Python), run daily by GitHub Actions and published to the `feeds` branch |
+| `platform/` | The self-hosted forensic platform: API server, workers, intelligence connectors, web client, tests ([docs/platform](docs/platform/README.md)) |
 | `lab/` | **MailShark Lab**, the Python forensic companion. It covers acquisition with chain of custody, campaign clustering, rotation experiments and HTML case reports. See [lab/README.md](lab/README.md). |
 | `scripts/` | Build, packaging, preview harness and accuracy evaluation |
-| `tests/` | Real-Gecko end-to-end test |
+| `tests/` | Real-Gecko end-to-end tests (add-on; platform web client) |
 
 ## Licence
 

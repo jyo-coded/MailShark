@@ -35,6 +35,8 @@ export interface SenderInputs {
   subject: string;
   senderSeenCount: number | null | undefined;
   recipient: AddressInfo | null;
+  /** Domains whose DKIM signature this engine verified itself (body hash + key). */
+  selfVerifiedDkimDomains?: string[];
 }
 
 const PROVIDER_ORGS = new Set(['google.com', 'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'live.com', 'microsoft.com', 'yahoo.com', 'icloud.com', 'apple.com', 'proton.me', 'protonmail.com', 'zoho.com', 'aol.com']);
@@ -76,8 +78,14 @@ export function analyzeSender(input: SenderInputs): SenderAnalysis & { claimed: 
   const dkimOrgs = input.auth.dkimDomains.map((d) => orgDomain(d));
   const fromIsBrand = (brand: Brand): boolean =>
     !!from && !freemail && (isBrandDomain(brand, from.orgDomain) || isBrandDomain(brand, from.domain));
+  // Verdicts only count when they can be attributed to the receiving organisation: a sender can
+  // write its own "dmarc=pass" header, and an export may have dropped the receiver's real one.
+  const receiverVerified = input.auth.source === 'trusted';
+  const selfVerified = (input.selfVerifiedDkimDomains ?? []).map((d) => orgDomain(d));
   const authenticatedAs = (brand: Brand): boolean => {
     if (!fromIsBrand(brand)) return false;
+    if (selfVerified.some((d) => isBrandDomain(brand, d) && (d === from?.orgDomain || isBrandDomain(brand, from?.orgDomain ?? '')))) return true;
+    if (!receiverVerified) return false;
     const aligned = input.auth.dmarc === 'pass' || input.auth.dkimAligned === true || input.auth.spfAligned === true;
     // ESP sending on the brand's behalf signs with the brand's own domain.
     return aligned || dkimOrgs.some((d) => isBrandDomain(brand, d));

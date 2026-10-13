@@ -1,0 +1,593 @@
+{
+  "generatedAt": "2026-10-13T02:55:25.479Z",
+  "engine": "1.2.0",
+  "design": "Variants of real phishing_pot messages (2\u20138 per campaign) + real SpamAssassin ham + unrelated phishing_pot singletons; pairwise metrics over labelled pairs; ARI over variants only.",
+  "intelEnv": "popularity/ASN from a live-synchronised intel.db (Tranco and iptoasn as of 2026-10-12)",
+  "defaults": {
+    "edgeThreshold": 0.6,
+    "exactThreshold": 0.75,
+    "resolution": 1,
+    "maxCandidatesPerMessage": 300,
+    "maxKeyFanout": 200
+  },
+  "independence": "Seeds and phishing confounders share no sender organisation (free-mail excepted), uncommon link domain (Tranco rank > 20,000 or unranked), attachment, Reply-To organisation or subject template.",
+  "candidatesSkippedAsRelated": 209,
+  "splits": {
+    "A": {
+      "campaigns": 60,
+      "variants": 301,
+      "phishSingletons": 90,
+      "ham": 120,
+      "campaignPlans": {
+        "fixed": 16,
+        "domain": 31,
+        "freemail": 13,
+        "rotateLinkDomain": 25,
+        "polymorphic": 2,
+        "sameNet": 27,
+        "drift-light": 27,
+        "drift-heavy": 17,
+        "drift-none": 16
+      },
+      "strategies": [
+        {
+          "strategy": "exact-artifacts",
+          "description": "Only single decisive shared artifacts (exact tier), connected components",
+          "falsePositiveEdgeCauses": {},
+          "falsePositiveEdgePairs": {},
+          "edges": {
+            "precision": 1,
+            "recall": 0.066,
+            "f1": 0.124
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.066,
+            "f1": 0.124
+          },
+          "ariOnVariants": 0.122,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 484,
+            "pure": 484
+          },
+          "exactEdges": 85,
+          "totalEdges": 1434,
+          "ms": 93
+        },
+        {
+          "strategy": "indicators-raw",
+          "description": "Shared indicators, base strengths without specificity discounts or provider neutralisation",
+          "falsePositiveEdgeCauses": {
+            "indicators:link-host+link-domain": 423
+          },
+          "falsePositiveEdgePairs": {
+            "variant~phish-singleton": 218,
+            "variant~variant": 205
+          },
+          "edges": {
+            "precision": 0.578,
+            "recall": 0.781,
+            "f1": 0.664
+          },
+          "clusters": {
+            "precision": 0.528,
+            "recall": 0.781,
+            "f1": 0.63
+          },
+          "ariOnVariants": 0.755,
+          "confoundersInCampaignClusters": 19,
+          "clusterPurity": {
+            "clusters": 52,
+            "pure": 48
+          },
+          "exactEdges": 239,
+          "totalEdges": 2234,
+          "ms": 38
+        },
+        {
+          "strategy": "indicators-specific",
+          "description": "Shared indicators with specificity weighting (popularity, fan-out, shared platforms)",
+          "falsePositiveEdgeCauses": {},
+          "falsePositiveEdgePairs": {},
+          "edges": {
+            "precision": 1,
+            "recall": 0.467,
+            "f1": 0.637
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.467,
+            "f1": 0.637
+          },
+          "ariOnVariants": 0.633,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 35,
+            "pure": 35
+          },
+          "exactEdges": 85,
+          "totalEdges": 1434,
+          "ms": 93
+        },
+        {
+          "strategy": "similarity-only",
+          "description": "Layered fingerprint similarity only (no indicator evidence)",
+          "falsePositiveEdgeCauses": {},
+          "falsePositiveEdgePairs": {},
+          "edges": {
+            "precision": 1,
+            "recall": 0.724,
+            "f1": 0.84
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.744,
+            "f1": 0.853
+          },
+          "ariOnVariants": 0.851,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 74,
+            "pure": 74
+          },
+          "exactEdges": 0,
+          "totalEdges": 568,
+          "ms": 145
+        },
+        {
+          "strategy": "combined-components",
+          "description": "Indicators + similarity, connected components",
+          "falsePositiveEdgeCauses": {},
+          "falsePositiveEdgePairs": {},
+          "edges": {
+            "precision": 1,
+            "recall": 0.853,
+            "f1": 0.921
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.863,
+            "f1": 0.926
+          },
+          "ariOnVariants": 0.925,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 70,
+            "pure": 70
+          },
+          "exactEdges": 85,
+          "totalEdges": 1739,
+          "ms": 143
+        },
+        {
+          "strategy": "combined-louvain",
+          "description": "Indicators + similarity, Louvain communities (platform default)",
+          "falsePositiveEdgeCauses": {},
+          "falsePositiveEdgePairs": {},
+          "edges": {
+            "precision": 1,
+            "recall": 0.853,
+            "f1": 0.921
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.863,
+            "f1": 0.926
+          },
+          "ariOnVariants": 0.925,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 70,
+            "pure": 70
+          },
+          "exactEdges": 85,
+          "totalEdges": 1739,
+          "ms": 149
+        }
+      ],
+      "thresholdSweep": [
+        {
+          "edgeThreshold": 0.5,
+          "edges": {
+            "precision": 1,
+            "recall": 0.919,
+            "f1": 0.958
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.935,
+            "f1": 0.967
+          },
+          "ariOnVariants": 0.966,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.55,
+          "edges": {
+            "precision": 1,
+            "recall": 0.887,
+            "f1": 0.94
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.902,
+            "f1": 0.948
+          },
+          "ariOnVariants": 0.948,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.6,
+          "edges": {
+            "precision": 1,
+            "recall": 0.853,
+            "f1": 0.921
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.863,
+            "f1": 0.926
+          },
+          "ariOnVariants": 0.925,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.65,
+          "edges": {
+            "precision": 1,
+            "recall": 0.824,
+            "f1": 0.903
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.837,
+            "f1": 0.911
+          },
+          "ariOnVariants": 0.91,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.7,
+          "edges": {
+            "precision": 1,
+            "recall": 0.79,
+            "f1": 0.883
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.806,
+            "f1": 0.893
+          },
+          "ariOnVariants": 0.891,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.75,
+          "edges": {
+            "precision": 1,
+            "recall": 0.763,
+            "f1": 0.866
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.789,
+            "f1": 0.882
+          },
+          "ariOnVariants": 0.88,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.8,
+          "edges": {
+            "precision": 1,
+            "recall": 0.724,
+            "f1": 0.84
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.742,
+            "f1": 0.852
+          },
+          "ariOnVariants": 0.85,
+          "confoundersInCampaignClusters": 0
+        }
+      ],
+      "seconds": 12
+    },
+    "B": {
+      "campaigns": 60,
+      "variants": 337,
+      "phishSingletons": 90,
+      "ham": 120,
+      "campaignPlans": {
+        "fixed": 23,
+        "domain": 27,
+        "freemail": 10,
+        "rotateLinkDomain": 28,
+        "polymorphic": 0,
+        "sameNet": 32,
+        "drift-heavy": 18,
+        "drift-light": 21,
+        "drift-none": 21
+      },
+      "strategies": [
+        {
+          "strategy": "exact-artifacts",
+          "description": "Only single decisive shared artifacts (exact tier), connected components",
+          "falsePositiveEdgeCauses": {},
+          "falsePositiveEdgePairs": {},
+          "edges": {
+            "precision": 1,
+            "recall": 0.001,
+            "f1": 0.002
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.001,
+            "f1": 0.002
+          },
+          "ariOnVariants": 0.002,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 540,
+            "pure": 540
+          },
+          "exactEdges": 9,
+          "totalEdges": 920,
+          "ms": 129
+        },
+        {
+          "strategy": "indicators-raw",
+          "description": "Shared indicators, base strengths without specificity discounts or provider neutralisation",
+          "falsePositiveEdgeCauses": {
+            "indicators:link-host+link-domain": 486
+          },
+          "falsePositiveEdgePairs": {
+            "variant~variant": 261,
+            "variant~phish-singleton": 225
+          },
+          "edges": {
+            "precision": 0.589,
+            "recall": 0.781,
+            "f1": 0.671
+          },
+          "clusters": {
+            "precision": 0.554,
+            "recall": 0.781,
+            "f1": 0.648
+          },
+          "ariOnVariants": 0.719,
+          "confoundersInCampaignClusters": 11,
+          "clusterPurity": {
+            "clusters": 47,
+            "pure": 44
+          },
+          "exactEdges": 158,
+          "totalEdges": 2267,
+          "ms": 39
+        },
+        {
+          "strategy": "indicators-specific",
+          "description": "Shared indicators with specificity weighting (popularity, fan-out, shared platforms)",
+          "falsePositiveEdgeCauses": {
+            "indicators:link-host+link-domain": 2
+          },
+          "falsePositiveEdgePairs": {
+            "variant~variant": 2
+          },
+          "edges": {
+            "precision": 0.995,
+            "recall": 0.469,
+            "f1": 0.638
+          },
+          "clusters": {
+            "precision": 0.952,
+            "recall": 0.469,
+            "f1": 0.629
+          },
+          "ariOnVariants": 0.625,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 40,
+            "pure": 39
+          },
+          "exactEdges": 9,
+          "totalEdges": 920,
+          "ms": 135
+        },
+        {
+          "strategy": "similarity-only",
+          "description": "Layered fingerprint similarity only (no indicator evidence)",
+          "falsePositiveEdgeCauses": {},
+          "falsePositiveEdgePairs": {},
+          "edges": {
+            "precision": 1,
+            "recall": 0.817,
+            "f1": 0.9
+          },
+          "clusters": {
+            "precision": 1,
+            "recall": 0.848,
+            "f1": 0.918
+          },
+          "ariOnVariants": 0.916,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 64,
+            "pure": 64
+          },
+          "exactEdges": 0,
+          "totalEdges": 749,
+          "ms": 133
+        },
+        {
+          "strategy": "combined-components",
+          "description": "Indicators + similarity, connected components",
+          "falsePositiveEdgeCauses": {
+            "indicators:link-host+link-domain": 2
+          },
+          "falsePositiveEdgePairs": {
+            "variant~variant": 2
+          },
+          "edges": {
+            "precision": 0.998,
+            "recall": 0.951,
+            "f1": 0.974
+          },
+          "clusters": {
+            "precision": 0.976,
+            "recall": 0.966,
+            "f1": 0.971
+          },
+          "ariOnVariants": 0.971,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 65,
+            "pure": 64
+          },
+          "exactEdges": 9,
+          "totalEdges": 1768,
+          "ms": 169
+        },
+        {
+          "strategy": "combined-louvain",
+          "description": "Indicators + similarity, Louvain communities (platform default)",
+          "falsePositiveEdgeCauses": {
+            "indicators:link-host+link-domain": 2
+          },
+          "falsePositiveEdgePairs": {
+            "variant~variant": 2
+          },
+          "edges": {
+            "precision": 0.998,
+            "recall": 0.951,
+            "f1": 0.974
+          },
+          "clusters": {
+            "precision": 0.976,
+            "recall": 0.966,
+            "f1": 0.971
+          },
+          "ariOnVariants": 0.971,
+          "confoundersInCampaignClusters": 0,
+          "clusterPurity": {
+            "clusters": 65,
+            "pure": 64
+          },
+          "exactEdges": 9,
+          "totalEdges": 1768,
+          "ms": 185
+        }
+      ],
+      "thresholdSweep": [
+        {
+          "edgeThreshold": 0.5,
+          "edges": {
+            "precision": 0.997,
+            "recall": 0.984,
+            "f1": 0.99
+          },
+          "clusters": {
+            "precision": 0.977,
+            "recall": 0.984,
+            "f1": 0.98
+          },
+          "ariOnVariants": 0.98,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.55,
+          "edges": {
+            "precision": 0.998,
+            "recall": 0.974,
+            "f1": 0.986
+          },
+          "clusters": {
+            "precision": 0.977,
+            "recall": 0.979,
+            "f1": 0.978
+          },
+          "ariOnVariants": 0.977,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.6,
+          "edges": {
+            "precision": 0.998,
+            "recall": 0.951,
+            "f1": 0.974
+          },
+          "clusters": {
+            "precision": 0.976,
+            "recall": 0.966,
+            "f1": 0.971
+          },
+          "ariOnVariants": 0.971,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.65,
+          "edges": {
+            "precision": 0.998,
+            "recall": 0.91,
+            "f1": 0.952
+          },
+          "clusters": {
+            "precision": 0.976,
+            "recall": 0.943,
+            "f1": 0.959
+          },
+          "ariOnVariants": 0.958,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.7,
+          "edges": {
+            "precision": 0.997,
+            "recall": 0.862,
+            "f1": 0.925
+          },
+          "clusters": {
+            "precision": 0.974,
+            "recall": 0.894,
+            "f1": 0.932
+          },
+          "ariOnVariants": 0.931,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.75,
+          "edges": {
+            "precision": 0.997,
+            "recall": 0.828,
+            "f1": 0.905
+          },
+          "clusters": {
+            "precision": 0.973,
+            "recall": 0.839,
+            "f1": 0.901
+          },
+          "ariOnVariants": 0.899,
+          "confoundersInCampaignClusters": 0
+        },
+        {
+          "edgeThreshold": 0.8,
+          "edges": {
+            "precision": 0.999,
+            "recall": 0.798,
+            "f1": 0.887
+          },
+          "clusters": {
+            "precision": 0.972,
+            "recall": 0.813,
+            "f1": 0.885
+          },
+          "ariOnVariants": 0.884,
+          "confoundersInCampaignClusters": 0
+        }
+      ],
+      "seconds": 11
+    }
+  }
+}

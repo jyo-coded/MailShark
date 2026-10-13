@@ -1,19 +1,11 @@
 // Accuracy harness: runs the shipping engine over labelled corpora and reports detection metrics.
 //   node scripts/eval/run.mjs [--limit N] [--out lab/out/engine-eval.jsonl]
-// Corpora (not committed; see lab/README.md): datasets/nazario (phishing, CC BY 4.0),
-// datasets/phishing_pot/email (phishing), datasets/spamassassin/{easy_ham,easy_ham_2,hard_ham} (legitimate).
-import { createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+// Corpora: see scripts/eval/corpus.ts.
+import { createWriteStream, mkdirSync, readFileSync } from 'node:fs';
+import { corpusStats, samples } from './corpus';
 import { dirname, join } from 'node:path';
 import { analyzeEmail } from '../../engine/src/analyze';
 import { BloomFilter, BloomIntel } from '../../engine/src/intel/bloom';
-
-interface Sample {
-  dataset: string;
-  group: string;
-  label: 'phish' | 'ham';
-  name: string;
-  raw: Uint8Array;
-}
 
 const args = process.argv.slice(2);
 const limit = Number(args[args.indexOf('--limit') + 1] || 0) || Infinity;
@@ -26,65 +18,6 @@ function loadIntel(): BloomIntel | null {
   const man = JSON.parse(readFileSync(join(intelDir, 'manifest.json'), 'utf8')) as { lists: { name: string; file: string; m: number; k: number; count: number }[] };
   return new BloomIntel(man.lists.map((l) => new BloomFilter({ name: l.name, m: l.m, k: l.k, count: l.count }, new Uint8Array(readFileSync(join(intelDir, l.file))))));
 }
-let blocked = 0;
-
-function* mbox(path: string): Generator<Uint8Array> {
-  const buf = readFileSync(path);
-  const text = buf.toString('latin1');
-  const starts: number[] = [];
-  const re = /(^|\n)From [^\n]*\n/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text))) starts.push(m.index + m[1]!.length);
-  for (let i = 0; i < starts.length; i++) {
-    const s = starts[i] as number;
-    const bodyStart = text.indexOf('\n', s) + 1;
-    const end = i + 1 < starts.length ? (starts[i + 1] as number) : text.length;
-    const msg = text.slice(bodyStart, end).replace(/\n>From /g, '\nFrom ');
-    yield Buffer.from(msg, 'latin1');
-  }
-}
-
-function* samples(): Generator<Sample> {
-  const naz = join(root, 'datasets', 'nazario');
-  if (existsSync(naz)) {
-    for (const f of readdirSync(naz).filter((x) => /^phishing-\d{4}$/.test(x)).sort()) {
-      let n = 0;
-      for (const raw of mbox(join(naz, f))) {
-        if (n++ >= limit) break;
-        yield { dataset: 'nazario', group: f.slice(-4), label: 'phish', name: `${f}#${n}`, raw };
-      }
-    }
-  }
-  const pot = join(root, 'datasets', 'phishing_pot', 'email');
-  if (existsSync(pot)) {
-    let n = 0;
-    for (const f of readdirSync(pot).filter((x) => x.endsWith('.eml')).sort()) {
-      if (n++ >= limit) break;
-      let raw: Uint8Array;
-      try {
-        raw = readFileSync(join(pot, f));
-      } catch {
-        blocked++; // e.g. quarantined by antivirus: the sample carries live malware
-        continue;
-      }
-      yield { dataset: 'phishing_pot', group: 'pot', label: 'phish', name: f, raw };
-    }
-  }
-  const sa = join(root, 'datasets', 'spamassassin');
-  for (const d of ['easy_ham', 'easy_ham_2', 'hard_ham']) {
-    const dir = join(sa, d);
-    if (!existsSync(dir)) continue;
-    let n = 0;
-    for (const f of readdirSync(dir).sort()) {
-      if (f === 'cmds' || statSync(join(dir, f)).isDirectory()) continue;
-      if (n++ >= limit) break;
-      let raw = readFileSync(join(dir, f));
-      // Strip the mbox envelope line some SpamAssassin files start with.
-      if (raw.subarray(0, 5).toString('latin1') === 'From ') raw = raw.subarray(raw.indexOf(10) + 1);
-      yield { dataset: 'spamassassin', group: d, label: 'ham', name: f, raw };
-    }
-  }
-}
 
 async function main(): Promise<void> {
   mkdirSync(dirname(outPath), { recursive: true });
@@ -95,7 +28,7 @@ async function main(): Promise<void> {
   let n = 0;
   const t0 = Date.now();
   const intel = loadIntel();
-  for (const s of samples()) {
+  for (const s of samples(root, limit)) {
     if (only && s.dataset !== only) continue;
     const key = `${s.dataset}/${s.group}`;
     const a = agg.get(key) ?? { n: 0, danger: 0, caution: 0, safe: 0, errors: 0 };
@@ -141,7 +74,7 @@ async function main(): Promise<void> {
   console.log(`  phishing detected (recall)     ${pct(pHit, pN)}  (${pHit}/${pN}); rated dangerous ${pct(pDanger, pN)}`);
   console.log(`  legitimate flagged (FPR)       ${pct(hFlag, hN)}  (${hFlag}/${hN}); rated dangerous ${pct(hDanger, hN)}`);
   console.log(`  precision ${(precision * 100).toFixed(1)}%   F1 ${((2 * precision * recall) / Math.max(1e-9, precision + recall) * 100).toFixed(1)}%   (class-balanced: see lab report)`);
-  if (blocked) console.log(`  ${blocked} samples unreadable (blocked by antivirus) were skipped`);
+  if (corpusStats.blocked) console.log(`  ${corpusStats.blocked} samples unreadable (blocked by antivirus) were skipped`);
   console.log(`  ${n} messages in ${Math.round((Date.now() - t0) / 1000)}s → ${outPath}`);
   console.log('\nFindings behind false positives:', [...fpFindings.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12));
   console.log('Missed phishing by primary intent:', [...fnReasons.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10));

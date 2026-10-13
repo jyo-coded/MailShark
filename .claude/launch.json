@@ -4,8 +4,20 @@
     {
       "name": "mailshark-preview",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["scripts/preview.mjs"],
+      "runtimeArgs": [
+        "scripts/preview.mjs"
+      ],
       "port": 5178
+    },
+    {
+      "name": "mailshark-platform",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--disable-warning=ExperimentalWarning",
+        "dist/platform/server.mjs",
+        "serve"
+      ],
+      "port": 7380
     }
   ]
 }

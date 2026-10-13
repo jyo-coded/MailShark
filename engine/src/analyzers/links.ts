@@ -116,8 +116,12 @@ function anchorTextDomain(text: string | null | undefined): string | null {
   return info.regDomain;
 }
 
-export function analyzeLinks(candidates: LinkCandidate[], intel: IntelProvider | null | undefined, unsubscribeUrls: Set<string>): LinkAnalysis[] {
+/** Distinct URLs analysed per message: bounds the cost of link-flood messages (≈1 ms per URL). */
+export const MAX_ANALYZED_LINKS = 1000;
+
+export function analyzeLinks(candidates: LinkCandidate[], intel: IntelProvider | null | undefined, unsubscribeUrls: Set<string>, stats?: { distinct: number; analyzed: number }): LinkAnalysis[] {
   const byUrl = new Map<string, LinkAnalysis>();
+  const skipped = new Set<string>();
   for (const cand of candidates) {
     const rawUrl = cand.url.trim();
     if (!rawUrl || rawUrl.startsWith('#') || /^(mailto|tel|sms|cid|about):/i.test(rawUrl)) continue;
@@ -125,6 +129,10 @@ export function analyzeLinks(candidates: LinkCandidate[], intel: IntelProvider |
     if (existing) {
       if (!existing.sources.includes(cand.source)) existing.sources.push(cand.source);
       if (!existing.displayText && cand.text) existing.displayText = cand.text.trim().slice(0, 200) || null;
+      continue;
+    }
+    if (byUrl.size >= MAX_ANALYZED_LINKS) {
+      skipped.add(rawUrl);
       continue;
     }
     const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(rawUrl)?.[1]?.toLowerCase() ?? '';
@@ -235,6 +243,10 @@ export function analyzeLinks(candidates: LinkCandidate[], intel: IntelProvider |
       lookalikeOf: lookalike ? `${lookalike.brand.name} (${lookalike.target})` : null,
       intelHit,
     });
+  }
+  if (stats) {
+    stats.distinct = byUrl.size + skipped.size;
+    stats.analyzed = byUrl.size;
   }
   return [...byUrl.values()];
 }
