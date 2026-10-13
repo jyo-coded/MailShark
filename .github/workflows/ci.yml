@@ -63,16 +63,10 @@ jobs:
           python-version: '3.12'
       - run: npm ci
       - run: python -m pip install selenium
-      # Pinned to ESR (the add-on's minimum, 140): Firefox 157 stopped allowing WebDriver to
-      # interact with privileged moz-extension:// pages, which the Lab checks need.
-      - uses: browser-actions/setup-firefox@v1
-        id: firefox
-        with:
-          firefox-version: latest-esr
       - name: Run the add-on in headless Firefox against the Gmail mock
         run: |
-          "${{ steps.firefox.outputs.firefox-path }}" --version
-          python tests/e2e_firefox.py --browser "${{ steps.firefox.outputs.firefox-path }}" --shots artifacts/e2e ${GECKOWEBDRIVER:+--geckodriver "$GECKOWEBDRIVER/geckodriver"}
+          firefox --version
+          python tests/e2e_firefox.py --browser "$(command -v firefox)" --shots artifacts/e2e ${GECKOWEBDRIVER:+--geckodriver "$GECKOWEBDRIVER/geckodriver"}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
