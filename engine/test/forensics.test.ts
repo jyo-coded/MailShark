@@ -269,3 +269,18 @@ describe('indicators, coverage and classification', () => {
     }
   });
 });
+
+describe('processing bounds', () => {
+  it('analyses at most 1,000 distinct links and reports the cap instead of hiding it', async () => {
+    const html = Array.from({ length: 3000 }, (_, i) => `<a href="https://l${i}.example/p?id=${i}">x</a>`).join('');
+    const t0 = performance.now();
+    const r = await analyzeEmail(`From: l@example.com\r\nTo: v@example.com\r\nSubject: links\r\nContent-Type: text/html\r\n\r\n${html}`);
+    expect(performance.now() - t0).toBeLessThan(15_000);
+    const f = r.findings.find((x) => x.id === 'links.analysis-capped');
+    expect(f?.category).toBe('integrity');
+    expect(f?.weight).toBe(0);
+    expect(f?.evidence?.find((e) => e.label === 'Distinct links')?.value).toBe('3000');
+    expect(r.coverage?.layers.find((l) => l.id === 'links')?.status).toBe('partial');
+    expect(findingDoc('links.analysis-capped')).toBeTruthy();
+  }, 30_000);
+});

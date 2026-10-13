@@ -36,6 +36,13 @@ describe('format detection (by content, never by extension)', () => {
     expect(code(Buffer.from('<html><body>not an email</body></html>'))).toBe('unsupported-format');
     expect(code(Buffer.from('just some text\nwithout headers\n'))).toBe('unsupported-format');
   });
+
+  it('accepts a truncated message and a header block longer than the 8 KB detection window', () => {
+    const full = fixture('paypal-lookalike-credential.eml');
+    expect(detectFormat(full.subarray(0, Math.floor(full.length / 2))).format).toBe('eml');
+    const longHeaders = Buffer.from(`Received: from a.example by b.example; Mon, 21 Sep 2026 08:49:05 +0000\r\nARC-Seal: i=1; b=${'A'.repeat(9000)}\r\nFrom: x@example.com\r\nSubject: s\r\n\r\nbody\r\n`);
+    expect(detectFormat(longHeaders.subarray(0, 8192)).format).toBe('eml');
+  });
 });
 
 describe('container expansion', () => {

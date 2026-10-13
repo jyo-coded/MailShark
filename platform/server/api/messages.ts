@@ -343,30 +343,36 @@ export function registerMessages(app: FastifyInstance, ctx: AppContext): void {
       where.push("i.value LIKE ? ESCAPE '\\'");
       params.push(like(text.toLowerCase()));
     }
-    const sort = q['sort'] === 'value' ? 'i.value ASC' : q['sort'] === 'intel' ? 'intel_hits DESC, messages DESC' : 'messages DESC, intel_hits DESC';
+    // Aliases avoid the names of message columns: in HAVING/ORDER BY SQLite would otherwise resolve
+    // "intel_hits" to messages.intel_hits instead of the per-indicator count.
+    const sort = q['sort'] === 'value' ? 'i.value ASC' : q['sort'] === 'intel' ? 'ind_intel DESC, ind_messages DESC' : 'ind_messages DESC, ind_intel DESC';
     const pageSize = int(q['pageSize'], 200, 1, 1000);
     const page = int(q['page'], 0, 0, 100_000);
-    const rows = ctx.db.all<{ id: number; type: string; value: string; messages: number; roles: string; suspicious: number; intel_hits: number; intel_sources: string | null; first_seen: number | null; last_seen: number | null }>(
-      `SELECT i.id, i.type, i.value, COUNT(DISTINCT o.message_id) AS messages, GROUP_CONCAT(DISTINCT o.role) AS roles, MAX(o.suspicious) AS suspicious,
-              (SELECT COUNT(*) FROM intel_matches im WHERE im.case_id = ? AND im.indicator_id = i.id AND im.strength > 0) AS intel_hits,
+    const intelOnly = q['intel'] === '1';
+    const intelCount = '(SELECT COUNT(*) FROM intel_matches im WHERE im.case_id = ? AND im.indicator_id = i.id AND im.strength > 0)';
+    const rows = ctx.db.all<{ id: number; type: string; value: string; ind_messages: number; roles: string; suspicious: number; ind_intel: number; intel_sources: string | null; first_seen: number | null; last_seen: number | null }>(
+      `SELECT i.id, i.type, i.value, COUNT(DISTINCT o.message_id) AS ind_messages, GROUP_CONCAT(DISTINCT o.role) AS roles, MAX(o.suspicious) AS suspicious,
+              ${intelCount} AS ind_intel,
               (SELECT GROUP_CONCAT(DISTINCT im.source) FROM intel_matches im WHERE im.case_id = ? AND im.indicator_id = i.id AND im.strength > 0) AS intel_sources,
               MIN(m.sent_at) AS first_seen, MAX(m.sent_at) AS last_seen
        FROM observations o JOIN indicators i ON i.id = o.indicator_id JOIN messages m ON m.id = o.message_id
-       WHERE ${where.join(' AND ')} GROUP BY i.id ${q['intel'] === '1' ? 'HAVING intel_hits > 0' : ''} ORDER BY ${sort} LIMIT ? OFFSET ?`,
+       WHERE ${where.join(' AND ')} GROUP BY i.id ${intelOnly ? 'HAVING ind_intel > 0' : ''} ORDER BY ${sort} LIMIT ? OFFSET ?`,
       id,
       id,
       ...params,
       pageSize,
       page * pageSize,
     );
-    const total = ctx.db.get<{ n: number }>(`SELECT COUNT(DISTINCT i.id) AS n FROM observations o JOIN indicators i ON i.id = o.indicator_id WHERE ${where.join(' AND ')}`, ...params)?.n ?? 0;
+    const total = intelOnly
+      ? ctx.db.get<{ n: number }>(`SELECT COUNT(*) AS n FROM (SELECT i.id, ${intelCount} AS ind_intel FROM observations o JOIN indicators i ON i.id = o.indicator_id WHERE ${where.join(' AND ')} GROUP BY i.id HAVING ind_intel > 0)`, id, ...params)?.n ?? 0
+      : ctx.db.get<{ n: number }>(`SELECT COUNT(DISTINCT i.id) AS n FROM observations o JOIN indicators i ON i.id = o.indicator_id WHERE ${where.join(' AND ')}`, ...params)?.n ?? 0;
     const typeCounts = ctx.db.all<{ type: string; n: number }>('SELECT i.type, COUNT(DISTINCT i.id) AS n FROM observations o JOIN indicators i ON i.id = o.indicator_id WHERE o.case_id = ? GROUP BY i.type', id);
     return {
       total,
       page,
       pageSize,
       types: typeCounts,
-      items: rows.map((r) => ({ id: r.id, type: r.type, value: r.value, messages: r.messages, roles: r.roles.split(','), suspicious: !!r.suspicious, intelHits: r.intel_hits, intelSources: r.intel_sources ? r.intel_sources.split(',') : [], firstSeen: r.first_seen, lastSeen: r.last_seen })),
+      items: rows.map((r) => ({ id: r.id, type: r.type, value: r.value, messages: r.ind_messages, roles: r.roles.split(','), suspicious: !!r.suspicious, intelHits: r.ind_intel, intelSources: r.intel_sources ? r.intel_sources.split(',') : [], firstSeen: r.first_seen, lastSeen: r.last_seen })),
     };
   });
 

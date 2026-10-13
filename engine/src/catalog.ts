@@ -332,6 +332,12 @@ const DOCS: Record<string, FindingDoc> = {
   },
 
   // ── Links ──
+  'links.analysis-capped': {
+    method: 'protocol',
+    rationale: 'A processing bound, not a sign of maliciousness: link-flood messages would otherwise make analysis arbitrarily slow. It is reported so that a reviewer knows the link layer was only partly examined.',
+    limitations: 'Malicious links placed after the first 1,000 distinct URLs are not analysed.',
+    actions: ['Extract the remaining links from the raw message with a dedicated tool if the message is otherwise of interest.'],
+  },
   'links.threat-intel': {
     method: 'intel',
     rationale: 'A linked host or URL is listed on a public threat-intelligence feed.',

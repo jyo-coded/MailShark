@@ -22,3 +22,10 @@ datasets/
 !engine/test/fixtures/**/*.mbox
 lab/out/
 lab/build/
+
+# Forensic platform: runtime data (evidence, databases, reports) never belongs in git
+/data/
+*.db
+*.db-wal
+*.db-shm
+SETUP_TOKEN

@@ -79,7 +79,8 @@ Rejected:
 5. **Jobs.** One job per message artifact, persisted in SQLite:
    - States: `queued → running → done | failed`.
    - A lease plus retry count lets work interrupted by a crash or restart resume.
-   - Deterministic failures (unparseable input) are not retried; transient ones (worker crash, timeout) are retried up to a limit.
+   - Deterministic failures (unparseable input, the MIME parser's nesting and header-size limits) are not retried and carry a specific error code; transient ones (worker crash, timeout) are retried up to a limit.
+   - Processing bounds keep hostile input from monopolising a worker: per-message timeout and heap limit, at most 40 attachments and 1,000 distinct links analysed per message (anything beyond is reported as an unscored integrity finding and lowers the links coverage layer to *partial*), archives listed from their central directory with only selected entries decompressed (at most 2 MB each, 4 MB per archive). A 200 MB zip bomb was processed in the robustness run without effect on other messages (VALIDATION.md §4).
 6. **Worker.**
    - Runs `analyzeEmail()` from the shared engine, with offline DKIM body-hash verification.
    - Builds the indicator list and evidence coverage.
@@ -108,7 +109,16 @@ Definitions:
   - coverage
   - the number of *independent* finding categories that agree
 
-  Its meaning is empirical: VALIDATION.md reports the precision of each class at each confidence level on held-out data.
+  Its meaning is empirical: VALIDATION.md reports the precision of each class at each confidence level on held-out data. The exact rules (`engine/src/classify.ts`):
+
+  | Class | high | medium | low |
+  |---|---|---|---|
+  | malicious | medium+ findings in ≥ 2 independent categories and coverage ≥ 0.6 | otherwise | coverage < 0.4 |
+  | suspicious | never | ≥ 10 points from both thresholds and coverage ≥ 0.5 | otherwise |
+  | benign | ≥ 20 points below the caution threshold, coverage ≥ 0.8, **no** risk finding above informational | otherwise | margin < 10 or coverage < 0.6 |
+  | inconclusive | never | never | always |
+
+  Engine 1.2 tightened *benign, high* from "no medium-or-higher finding" to "no low-or-higher finding": the 1.1 rule was wrong for 27 % of its calls on the evaluation corpus (VALIDATION.md §2.3).
 
 Missing evidence is never read as negative evidence. A message without `Authentication-Results` is reported as *authentication: not available in this evidence*, never as *failed*.
 
@@ -147,7 +157,7 @@ The design is in [CAMPAIGNS.md](CAMPAIGNS.md). In short:
 4. **Clusters.** Messages are connected by evidence-weighted edges and clustered with Louvain community detection. A component held together by one weak edge is therefore not merged. Every cluster records the edges, and the artifacts behind each edge, that justify it.
 5. **External matching.** Message indicators are matched against the intelligence store (feeds and MISP events), plus opt-in online lookups that are recorded in the audit log because they disclose indicators. A suspicious message is never forced into a known campaign. It may stay unmatched, or form a new local cluster.
 
-Thresholds are configuration with documented meaning. Their effect is measured in VALIDATION.md on labelled synthetic campaigns and on real-data silver labels.
+Thresholds are configuration with documented meaning. Their effect is measured in VALIDATION.md §3 on labelled campaigns generated from real phishing messages, with real legitimate and unrelated phishing mail as confounders. No real-world corpus with campaign labels was available, so no real-data campaign metric is reported.
 
 ## 8. Security model
 

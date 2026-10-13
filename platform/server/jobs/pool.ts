@@ -15,7 +15,7 @@ export class TaskError extends Error {
 }
 
 // Errors that will happen again with the same input: retrying wastes time.
-const DETERMINISTIC = new Set(['unsupported-format', 'empty-file', 'binary-not-email', 'ole-not-msg', 'malformed-container', 'unsupported-encoding', 'msg-parse-error', 'integrity-error', 'ENOENT']);
+const DETERMINISTIC = new Set(['unsupported-format', 'empty-file', 'binary-not-email', 'ole-not-msg', 'malformed-container', 'unsupported-encoding', 'msg-parse-error', 'integrity-error', 'mime-nesting-limit', 'header-size-limit', 'ENOENT']);
 
 interface Slot {
   worker: Worker;

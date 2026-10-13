@@ -9,6 +9,7 @@ import { canonicalUrl, hostCandidates, urlWithoutQuery } from '../server/intel/n
 import { connector, mispIndicators, parseCsvLine } from '../server/intel/sources';
 import { runSync } from '../server/intel/sync';
 import { fetchResource, HttpError } from '../server/intel/http';
+import { externalMatches, isGenericName, seriesKey } from '../server/correlation/external';
 import { loadConfig } from '../server/config';
 
 const tmp = (): string => mkdtempSync(join(tmpdir(), 'ms-intel-'));
@@ -16,7 +17,7 @@ const cfg = loadConfig({ dataDir: tmp() }).intel;
 
 function freshStore(): IntelStore {
   const s = new IntelStore(join(tmp(), 'intel.db'));
-  for (const id of ['phishing-database', 'urlhaus', 'threatfox', 'circl-osint', 'spamhaus-drop', 'tor-exits', 'openphish']) s.ensureSource(id, true);
+  for (const id of ['phishing-database', 'urlhaus', 'threatfox', 'circl-osint', 'spamhaus-drop', 'tor-exits', 'openphish', 'phishtank']) s.ensureSource(id, true);
   s.replacePopular([['google.com', 1], ['angelfire.com', 3245], ['example-legit.com', 900_000]]);
   return s;
 }
@@ -95,7 +96,7 @@ describe('intelligence store lookups', () => {
   });
 });
 
-describe('connectors (recorded payloads, mocked network)', () => {
+describe('connectors (payloads in the providers’ documented formats, mocked network)', () => {
   afterEach(() => vi.unstubAllGlobals());
   const respond = (body: Uint8Array | string, headers: Record<string, string> = {}): Response => new Response(typeof body === 'string' ? body : Buffer.from(body), { status: 200, headers });
 
@@ -140,9 +141,110 @@ describe('connectors (recorded payloads, mocked network)', () => {
     expect(s.lookupUrl('https://kept.example/login')).toHaveLength(1);
   }, 60_000);
 
+  it('OpenPhish: fetches the GitHub-hosted community feed', async () => {
+    const fetchMock = vi.fn(async (_u: URL | string) => respond('https://phish-one.example/login\nhttps://phish-two.example/verify?x=1\n'));
+    vi.stubGlobal('fetch', fetchMock);
+    const s = freshStore();
+    await runSync(s, connector('openphish')!, cfg);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt');
+    expect(s.lookupUrl('https://phish-one.example/login')[0]).toMatchObject({ source: 'openphish', threat: 'phishing' });
+  });
+
+  it('PhishTank: maps verified entries with target brand and detail page', async () => {
+    const list = [{ phish_id: 8812, url: 'https://paypa1-login.example/signin', phish_detail_url: 'http://www.phishtank.com/phish_detail.php?phish_id=8812', submission_time: '2026-10-11T08:00:00+00:00', verification_time: '2026-10-11T09:00:00+00:00', target: 'PayPal' }];
+    const fetchMock = vi.fn(async (_u: URL | string) => respond(JSON.stringify(list)));
+    vi.stubGlobal('fetch', fetchMock);
+    const s = freshStore();
+    await runSync(s, connector('phishtank')!, { ...cfg, phishtankAppKey: 'k' });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('https://data.phishtank.com/data/k/online-valid.json');
+    expect(s.lookupUrl('https://paypa1-login.example/signin')[0]).toMatchObject({ family: 'target: PayPal', externalId: '8812' });
+  });
+
+  it('Tor exit list: stored as context (tor-exit), never as a threat verdict', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => respond('185.220.101.1\n185.220.101.2\n')));
+    const s = freshStore();
+    await runSync(s, connector('tor-exits')!, cfg);
+    expect(s.lookupIp('185.220.101.1')[0]).toMatchObject({ source: 'tor-exits', threat: 'tor-exit' });
+  });
+
+  it('OTX lookup: turns pulses into named external events (and reports none found)', async () => {
+    const pulse = { pulse_info: { count: 1, pulses: [{ id: 'p1', name: 'Microsoft 365 AiTM phishing wave', created: '2026-09-30T10:00:00', modified: '2026-10-01T10:00:00', tags: ['aitm'], references: ['https://example-research.org/aitm'], adversary: 'Storm-0000', malware_families: [{ display_name: 'Tycoon2FA' }], author_name: 'AlienVault' }] } };
+    const fetchMock = vi.fn(async (_u: URL | string) => respond(JSON.stringify(pulse)));
+    vi.stubGlobal('fetch', fetchMock);
+    const s = freshStore();
+    const r = await connector('otx')!.lookup!({ store: s, config: cfg }, 'domain', 'login-m365.example');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('https://otx.alienvault.com/api/v1/indicators/domain/login-m365.example/general');
+    expect(r.status).toBe('found');
+    expect(r.events[0]).toMatchObject({ id: 'p1', name: 'Microsoft 365 AiTM phishing wave', org: 'AlienVault' });
+    expect(r.events[0]?.tags).toEqual(expect.arrayContaining(['adversary:Storm-0000', 'malware:Tycoon2FA']));
+    vi.stubGlobal('fetch', vi.fn(async () => respond(JSON.stringify({ pulse_info: { count: 0, pulses: [] } }))));
+    expect((await connector('otx')!.lookup!({ store: s, config: cfg }, 'ip', '198.51.100.7')).status).toBe('not-found');
+  });
+
+  it('VirusTotal lookup: engine counts, threat label and 404 as unknown', async () => {
+    const body = { data: { attributes: { last_analysis_stats: { malicious: 7, suspicious: 1, harmless: 60 }, popular_threat_classification: { suggested_threat_label: 'trojan.formbook' }, tags: ['peexe'], first_submission_date: 1790000000, last_analysis_date: 1790100000 } } };
+    const fetchMock = vi.fn(async (_u: URL | string) => respond(JSON.stringify(body)));
+    vi.stubGlobal('fetch', fetchMock);
+    const s = freshStore();
+    const vcfg = { ...cfg, virusTotalApiKey: 'vt' };
+    const r = await connector('virustotal')!.lookup!({ store: s, config: vcfg }, 'sha256', 'a'.repeat(64));
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`https://www.virustotal.com/api/v3/files/${'a'.repeat(64)}`);
+    expect(r.hits[0]).toMatchObject({ threat: 'malicious', family: 'trojan.formbook', confidence: 7 });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{"error":{"code":"NotFoundError"}}', { status: 404 })));
+    expect((await connector('virustotal')!.lookup!({ store: s, config: vcfg }, 'domain', 'unknown.example')).status).toBe('not-found');
+  }, 30_000);
+
+  it('MISP instance lookup: events that contain the value, via restSearch on the configured host only', async () => {
+    const body = { response: { Attribute: [{ event_id: '17', Event: { info: 'Invoice lure campaign', uuid: 'ev-uuid', date: '2026-09-02', Orgc: { name: 'Our SOC' } }, Tag: [{ name: 'tlp:amber' }] }] } };
+    const fetchMock = vi.fn(async (_u: URL | string, _init?: RequestInit) => respond(JSON.stringify(body)));
+    vi.stubGlobal('fetch', fetchMock);
+    const s = freshStore();
+    const mcfg = { ...cfg, mispUrl: 'https://misp.internal.example', mispApiKey: 'key' };
+    const r = await connector('misp')!.lookup!({ store: s, config: mcfg }, 'email', 'billing@invoices.example');
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('https://misp.internal.example/attributes/restSearch');
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({ value: 'billing@invoices.example' });
+    expect(r.events[0]).toMatchObject({ id: 'ev-uuid', name: 'Invoice lure campaign', org: 'Our SOC', reference: 'https://misp.internal.example/events/view/17' });
+  });
+
+  it('MalwareBazaar API lookup: signature and first-seen for a hash', async () => {
+    const body = { query_status: 'ok', data: [{ sha256_hash: 'b'.repeat(64), signature: 'AgentTesla', first_seen: '2026-09-10 08:00:00', last_seen: null, file_name: 'invoice.exe', tags: ['exe'], delivery_method: 'email_attachment' }] };
+    vi.stubGlobal('fetch', vi.fn(async () => respond(JSON.stringify(body))));
+    const s = freshStore();
+    const r = await connector('malwarebazaar-api')!.lookup!({ store: s, config: { ...cfg, abusechAuthKey: 'k' } }, 'sha256', 'b'.repeat(64));
+    expect(r.hits[0]).toMatchObject({ family: 'AgentTesla', reference: `https://bazaar.abuse.ch/sample/${'b'.repeat(64)}/` });
+    expect(r.hits[0]?.tags).toContain('delivery:email_attachment');
+  });
+
   it('the HTTP client refuses hosts outside the connector allowlist (SSRF guard), even via redirects', async () => {
     await expect(fetchResource('https://169.254.169.254/latest/meta-data', { allowedHosts: ['urlhaus.abuse.ch'] })).rejects.toBeInstanceOf(HttpError);
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 302, headers: { location: 'http://127.0.0.1:8080/admin' } })));
     await expect(fetchResource('https://urlhaus.abuse.ch/downloads/csv/', { allowedHosts: ['urlhaus.abuse.ch'], retries: 0 })).rejects.toThrow(/refused/);
+  });
+});
+
+describe('external event records', () => {
+  it('recognises generated record series and generic indicator dumps', () => {
+    expect(seriesKey('Phishing | Oct 13, 2026 | Part 182/566')).toBe(seriesKey('Phishing | Oct 12, 2026 | Part 182/566'));
+    expect(seriesKey('Phishing | 2026-10-13 | Part 1 of 9')).toBe('phishing');
+    expect(isGenericName('Phishing | Oct 13, 2026 | Part 182/566')).toBe(true);
+    expect(isGenericName('Malware URLs daily feed 2026-10-01')).toBe(true);
+    expect(isGenericName('Microsoft 365 AiTM phishing wave targeting finance')).toBe(false);
+    expect(isGenericName('Tycoon2FA phishing kit')).toBe(false);
+  });
+
+  it('merges a series into one record and does not call a generic dump a reported campaign association', () => {
+    const s = freshStore();
+    s.ensureSource('otx', true);
+    for (const d of [10, 11, 12]) s.upsertEvent('otx', { id: `p${d}`, name: `Phishing | Oct ${d}, 2026 | Part 3/9`, date: Date.UTC(2026, 9, d), updatedAt: null, org: 'feeds', tags: [], threatLevel: null, reference: null, indicators: [{ type: 'url', value: 'https://kit.example/o365/a1b2c3/login.php', category: null, toIds: true, comment: null }] });
+    s.upsertEvent('otx', { id: 'named', name: 'Storm-0000 AiTM campaign against payroll teams', date: Date.UTC(2026, 9, 1), updatedAt: null, org: 'research', tags: [], threatLevel: null, reference: null, indicators: [{ type: 'url', value: 'https://kit.example/o365/a1b2c3/login.php', category: null, toIds: true, comment: null }] });
+    const { campaigns } = externalMatches(s, [{ messageId: 'm1', type: 'url', value: 'https://kit.example/o365/a1b2c3/login.php', role: 'link', context: null }]);
+    expect(campaigns).toHaveLength(2);
+    const series = campaigns.find((c) => c.generic);
+    expect(series?.name).toBe('Phishing (series of 3 records)');
+    expect(series?.seriesEventIds?.sort()).toEqual(['p10', 'p11', 'p12']);
+    expect(series?.assessment).toBe('possible-association');
+    expect(series?.rationale.join(' ')).toMatch(/not a named campaign/);
+    const named = campaigns.find((c) => !c.generic);
+    expect(named?.assessment).toBe('reported-association');
   });
 });

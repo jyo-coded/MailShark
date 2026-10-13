@@ -25,6 +25,7 @@ const nodeCommon = {
   target: 'node22',
   sourcemap: dev ? 'inline' : false,
   logLevel: 'warning',
+  outExtension: { '.js': '.mjs' },
   // Fastify and its plugins resolve files at runtime; they stay in node_modules.
   external: ['fastify', '@fastify/*'],
   banner: { js: "import { createRequire as __msCreateRequire } from 'node:module'; const require = __msCreateRequire(import.meta.url);" },
@@ -68,11 +69,12 @@ function copyStatic() {
 }
 
 copyStatic();
+const targets = [...server, web];
 if (watch) {
-  const ctxs = await Promise.all([...server, web].map((o) => context(o)));
+  const ctxs = await Promise.all(targets.map((o) => context(o)));
   await Promise.all(ctxs.map((c) => c.watch()));
   console.log(`Watching platform build → ${out}`);
 } else {
-  await Promise.all([...server, web].map((o) => build(o)));
+  await Promise.all(targets.map((o) => build(o)));
   console.log(`Built MailShark Forensic Platform → ${out}`);
 }

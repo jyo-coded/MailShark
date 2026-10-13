@@ -20,7 +20,7 @@ import { buildFingerprint } from './fingerprint';
 import { md5Hex, sha1Hex, sha256Hex } from './util/hash';
 import { jaccard, latin1, latin1ToBytes, tokenize } from './util/text';
 
-export const ENGINE_VERSION = '1.1.0';
+export const ENGINE_VERSION = '1.2.0';
 
 const SINGLE_INSTANCE = ['from', 'sender', 'reply-to', 'to', 'cc', 'subject', 'date', 'message-id', 'in-reply-to', 'references', 'content-type', 'mime-version'];
 
@@ -179,7 +179,8 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
   const lu = hv('list-unsubscribe');
   if (lu) for (const m of lu.matchAll(/<(https?:[^>]+)>/gi)) unsubscribe.add(m[1] as string);
   for (const u of unsubscribe) candidates.push({ url: u, source: 'header' });
-  const links = analyzeLinks(candidates, options.intel, unsubscribe).slice(0, 250);
+  const linkStats = { distinct: 0, analyzed: 0 };
+  const links = analyzeLinks(candidates, options.intel, unsubscribe, linkStats).slice(0, 250);
   mark('links', t);
 
   // ── Content ──
@@ -255,6 +256,19 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
       forensics,
     }),
   );
+  if (linkStats.distinct > linkStats.analyzed) {
+    // A processing bound, reported as an evidence-coverage observation (never scored).
+    findings.push({
+      id: 'links.analysis-capped',
+      category: 'integrity',
+      severity: 'info',
+      weight: 0,
+      title: 'Not every link was analysed',
+      detail: `The message contains ${linkStats.distinct} distinct links; the first ${linkStats.analyzed} in document order were analysed, to bound processing time. Links beyond the limit were not inspected, matched against intelligence or extracted as indicators.`,
+      evidence: [{ label: 'Distinct links', value: String(linkStats.distinct) }, { label: 'Analysed', value: String(linkStats.analyzed) }],
+      refs: ['body:html'],
+    });
+  }
   const scored = scoreFindings(findings, auth.source, bodyText.length);
   mark('score', t);
 
@@ -303,6 +317,7 @@ export async function analyzeEmail(input: Uint8Array | ArrayBuffer | string, opt
     html: htmlRes.analysis,
     structure,
     links,
+    linksCapped: linkStats.distinct > linkStats.analyzed ? { analyzed: linkStats.analyzed, distinct: linkStats.distinct } : null,
     attachments,
   });
   const classification = classify(scored.score, findings, coverage, options.thresholds);

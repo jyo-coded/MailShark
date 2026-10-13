@@ -9,10 +9,81 @@ import { renderMarkdown } from '../reports/markdown';
 import { renderDocx } from '../reports/docx';
 import { REPORT_JSON_SCHEMA } from '../reports/schema';
 import { messageSummary, type MessageRow } from './messages';
+import { allFindingDocs } from '../../../engine/src/catalog';
+import { DEFAULT_CORR_CONFIG, FAMILY_BASE } from '../correlation/engine';
 
 const FORMATS = { json: { ext: 'json', type: 'application/json; charset=utf-8' }, md: { ext: 'md', type: 'text/markdown; charset=utf-8' }, docx: { ext: 'docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' } } as const;
 
 export function registerInsight(app: FastifyInstance, ctx: AppContext): void {
+  // ── Case statistics (overview dashboard) ──
+  app.get('/api/cases/:id/stats', async (req) => {
+    const { id } = req.params as { id: string };
+    requireCase(ctx, req, id);
+    const SEV_RANK: Record<string, number> = { critical: 5, high: 4, medium: 3, low: 2, info: 1, none: 0 };
+    const severity = ctx.db.all<{ severity: string | null; n: number }>("SELECT severity, COUNT(*) AS n FROM messages WHERE case_id = ? AND status = 'analyzed' GROUP BY severity", id);
+    // Timeline: adaptive buckets (≤ 60) over the messages' Date header, falling back to intake time.
+    const span = ctx.db.get<{ lo: number | null; hi: number | null }>("SELECT MIN(COALESCE(sent_at, created_at)) AS lo, MAX(COALESCE(sent_at, created_at)) AS hi FROM messages WHERE case_id = ? AND status IN ('analyzed', 'failed')", id);
+    let timeline: { start: number; bucketMs: number; buckets: { t: number; malicious: number; suspicious: number; other: number }[] } | null = null;
+    if (span?.lo != null && span.hi != null) {
+      const H = 3_600_000;
+      const sizes = [H, 6 * H, 24 * H, 7 * 24 * H, 30 * 24 * H, 365 * 24 * H];
+      const bucketMs = sizes.find((s) => (span.hi! - span.lo!) / s <= 60) ?? 365 * 24 * H;
+      const start = Math.floor(span.lo / bucketMs) * bucketMs;
+      const rows = ctx.db.all<{ b: number; malicious: number; suspicious: number; other: number }>(
+        `SELECT CAST((COALESCE(sent_at, created_at) - ?) / ? AS INTEGER) AS b, SUM(class = 'malicious') AS malicious, SUM(class = 'suspicious') AS suspicious, SUM(class NOT IN ('malicious', 'suspicious') OR class IS NULL) AS other
+         FROM messages WHERE case_id = ? AND status IN ('analyzed', 'failed') GROUP BY b ORDER BY b`,
+        start,
+        bucketMs,
+        id,
+      );
+      const n = Math.floor((span.hi - start) / bucketMs) + 1;
+      const byB = new Map(rows.map((r) => [r.b, r]));
+      timeline = { start, bucketMs, buckets: Array.from({ length: n }, (_, b) => ({ t: start + b * bucketMs, malicious: byB.get(b)?.malicious ?? 0, suspicious: byB.get(b)?.suspicious ?? 0, other: byB.get(b)?.other ?? 0 })) };
+    }
+    const findingRows = ctx.db.all<{ finding_id: string; title: string; category: string; severity: string; n: number }>(
+      "SELECT finding_id, MAX(title) AS title, MAX(category) AS category, severity, COUNT(*) AS n FROM findings WHERE case_id = ? AND weight > 0 AND category != 'integrity' GROUP BY finding_id, severity",
+      id,
+    );
+    const findings = new Map<string, { id: string; title: string; category: string; severity: string; messages: number }>();
+    for (const r of findingRows) {
+      const cur = findings.get(r.finding_id);
+      if (!cur) findings.set(r.finding_id, { id: r.finding_id, title: r.title, category: r.category, severity: r.severity, messages: r.n });
+      else {
+        cur.messages += r.n;
+        if ((SEV_RANK[r.severity] ?? 0) > (SEV_RANK[cur.severity] ?? 0)) cur.severity = r.severity;
+      }
+    }
+    const topFindings = [...findings.values()].sort((a, b) => b.messages - a.messages || (SEV_RANK[b.severity] ?? 0) - (SEV_RANK[a.severity] ?? 0)).slice(0, 12);
+    const topIntel = ctx.db
+      .all<{ id: number; type: string; value: string; messages: number; sources: string }>(
+        `SELECT i.id, i.type, i.value, COUNT(DISTINCT im.message_id) AS messages, GROUP_CONCAT(DISTINCT im.source) AS sources
+         FROM intel_matches im JOIN indicators i ON i.id = im.indicator_id WHERE im.case_id = ? AND im.strength > 0 GROUP BY i.id ORDER BY messages DESC, MAX(im.strength) DESC LIMIT 10`,
+        id,
+      )
+      .map((r) => ({ ...r, sources: r.sources.split(',') }));
+    const topSenders = ctx.db.all<{ domain: string; messages: number; malicious: number; suspicious: number }>(
+      `SELECT LOWER(SUBSTR(from_addr, INSTR(from_addr, '@') + 1)) AS domain, COUNT(*) AS messages, SUM(class = 'malicious') AS malicious, SUM(class = 'suspicious') AS suspicious
+       FROM messages WHERE case_id = ? AND status = 'analyzed' AND from_addr LIKE '%@%' GROUP BY domain ORDER BY (SUM(class = 'malicious') + SUM(class = 'suspicious')) DESC, messages DESC LIMIT 8`,
+      id,
+    );
+    const clusters = ctx.db.all<{ id: string; label: string; size: number; verdict: string; confidence: string; first_seen: number | null; last_seen: number | null }>(
+      "SELECT id, label, size, verdict, confidence, first_seen, last_seen FROM clusters WHERE case_id = ? ORDER BY CASE verdict WHEN 'threat' THEN 0 WHEN 'mixed' THEN 1 ELSE 2 END, size DESC LIMIT 6",
+      id,
+    );
+    const external = ctx.db.all<{ assessment: string; n: number }>('SELECT assessment, COUNT(*) AS n FROM external_campaigns WHERE case_id = ? GROUP BY assessment', id);
+    const failures = ctx.db.all<{ code: string | null; n: number }>("SELECT error_code AS code, COUNT(*) AS n FROM messages WHERE case_id = ? AND status = 'failed' GROUP BY error_code ORDER BY n DESC", id);
+    return {
+      severity: Object.fromEntries(severity.map((s) => [s.severity ?? 'none', s.n])),
+      timeline,
+      topFindings,
+      topIntel,
+      topSenders,
+      clusters: clusters.map((c) => ({ id: c.id, label: c.label, size: c.size, verdict: c.verdict, confidence: c.confidence, firstSeen: c.first_seen, lastSeen: c.last_seen })),
+      external: Object.fromEntries(external.map((e) => [e.assessment, e.n])),
+      failures,
+    };
+  });
+
   // ── Campaigns ──
   app.get('/api/cases/:id/clusters', async (req) => {
     const { id } = req.params as { id: string };
@@ -69,11 +140,13 @@ export function registerInsight(app: FastifyInstance, ctx: AppContext): void {
     const q = req.query as Record<string, string | undefined>;
     const kinds = list(q['types'], NODE_KINDS) as NodeKind[];
     const classes = list(q['classes']);
+    const severities = list(q['severities'], ['critical', 'high', 'medium', 'low', 'info', 'none']);
     const sources = list(q['sources']);
     const focus = list(q['focus']).filter((f) => /^[mcxi]:[\w:.-]+$/.test(f)).slice(0, 20);
     return buildGraph(ctx.db, id, {
       kinds: new Set(kinds.length ? kinds : DEFAULT_KINDS),
       classes: classes.length ? new Set(classes) : null,
+      severities: severities.length ? new Set(severities) : null,
       from: q['from'] ? int(q['from'], 0, 0, Number.MAX_SAFE_INTEGER) : null,
       to: q['to'] ? int(q['to'], 0, 0, Number.MAX_SAFE_INTEGER) : null,
       minEdge: Math.min(1, Math.max(0, Number(q['minEdge'] ?? 0.6) || 0.6)),
@@ -88,6 +161,16 @@ export function registerInsight(app: FastifyInstance, ctx: AppContext): void {
     });
   });
 
+  // ── Method catalogue (what every finding means, live thresholds and correlation weights) ──
+  app.get('/api/catalog', async (req) => {
+    requireUser(req);
+    return {
+      findings: allFindingDocs(),
+      thresholds: ctx.cfg.thresholds,
+      correlation: { ...DEFAULT_CORR_CONFIG, ...ctx.cfg.correlation, families: FAMILY_BASE },
+    };
+  });
+
   // ── Reports ──
   app.get('/api/schema/report', async () => REPORT_JSON_SCHEMA);
 
@@ -95,8 +178,9 @@ export function registerInsight(app: FastifyInstance, ctx: AppContext): void {
     const { id } = req.params as { id: string };
     const { user } = requireCase(ctx, req, id);
     const b = (req.body ?? {}) as Record<string, unknown>;
-    const format = (str(b['format'], 10) ?? 'json') as keyof typeof FORMATS;
-    if (!FORMATS[format]) throw badRequest('Format must be json, md or docx.');
+    // One report model, rendered to every requested format: the renderings share report id and data hash.
+    const formats = (Array.isArray(b['formats']) ? list(b['formats']) : [str(b['format'], 10) ?? 'json']) as (keyof typeof FORMATS)[];
+    if (!formats.length || formats.some((f) => !FORMATS[f])) throw badRequest('Formats must be json, md and/or docx.');
     let scope: ReportScope = { kind: 'case' };
     if (b['scope'] === 'batch') {
       const batchId = str(b['batchId'], 60);
@@ -109,30 +193,35 @@ export function registerInsight(app: FastifyInstance, ctx: AppContext): void {
     }
     const full = ctx.auth.user(user.id) as NonNullable<ReturnType<typeof ctx.auth.user>>;
     const report = buildReport(ctx, id, scope, full);
-    let bytes: Buffer;
-    if (format === 'json') bytes = Buffer.from(JSON.stringify(report, null, 2));
-    else if (format === 'md') bytes = Buffer.from(renderMarkdown(report));
-    else bytes = await renderDocx(report);
-    const fileSha = createHash('sha256').update(bytes).digest('hex');
-    await ctx.store.putBytes('reports', bytes);
-    const rid = `rep_${randomUUID()}`;
-    ctx.db.run(
-      'INSERT INTO reports (id, case_id, created_by, created_at, scope, scope_ref, format, file_sha256, data_sha256, size, report_uuid, schema_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      rid,
-      id,
-      user.id,
-      Date.now(),
-      scope.kind,
-      scope.kind === 'batch' ? scope.batchId : scope.kind === 'messages' ? scope.ids.length + ' messages' : null,
-      format,
-      fileSha,
-      report.integrity.dataSha256,
-      bytes.length,
-      report.report.id,
-      REPORT_SCHEMA_VERSION,
-    );
-    audit(ctx, req, 'report.generated', { caseId: id, target: rid, details: { format, scope: scope.kind, fileSha256: fileSha, dataSha256: report.integrity.dataSha256, reportId: report.report.id } });
-    return reply.code(201).send({ id: rid, format, size: bytes.length, fileSha256: fileSha, dataSha256: report.integrity.dataSha256, reportId: report.report.id });
+    const out: { id: string; format: string; size: number; fileSha256: string; dataSha256: string; reportId: string }[] = [];
+    for (const format of [...new Set(formats)]) {
+      let bytes: Buffer;
+      if (format === 'json') bytes = Buffer.from(JSON.stringify(report, null, 2));
+      else if (format === 'md') bytes = Buffer.from(renderMarkdown(report));
+      else bytes = await renderDocx(report);
+      const fileSha = createHash('sha256').update(bytes).digest('hex');
+      await ctx.store.putBytes('reports', bytes);
+      const rid = `rep_${randomUUID()}`;
+      ctx.db.run(
+        'INSERT INTO reports (id, case_id, created_by, created_at, scope, scope_ref, format, file_sha256, data_sha256, size, report_uuid, schema_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        rid,
+        id,
+        user.id,
+        Date.now(),
+        scope.kind,
+        scope.kind === 'batch' ? scope.batchId : scope.kind === 'messages' ? scope.ids.length + ' messages' : null,
+        format,
+        fileSha,
+        report.integrity.dataSha256,
+        bytes.length,
+        report.report.id,
+        REPORT_SCHEMA_VERSION,
+      );
+      audit(ctx, req, 'report.generated', { caseId: id, target: rid, details: { format, scope: scope.kind, fileSha256: fileSha, dataSha256: report.integrity.dataSha256, reportId: report.report.id } });
+      out.push({ id: rid, format, size: bytes.length, fileSha256: fileSha, dataSha256: report.integrity.dataSha256, reportId: report.report.id });
+    }
+    // Single-format requests keep the original response shape.
+    return reply.code(201).send(Array.isArray(b['formats']) ? { reportId: report.report.id, dataSha256: report.integrity.dataSha256, files: out } : out[0]);
   });
 
   app.get('/api/cases/:id/reports', async (req) => {

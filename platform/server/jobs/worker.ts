@@ -109,16 +109,30 @@ async function runExpand(t: Extract<WorkerTask, { kind: 'expand' }>): Promise<Ex
   return { format: det.format, formatNote: det.note, truncated: exp.truncated, notes: exp.notes, messages };
 }
 
+/** The MIME parser's hard limits: deterministic for the same bytes, so reported with a specific code and not retried. */
+function parserLimit(e: unknown): Error | null {
+  const msg = e instanceof Error ? e.message : String(e);
+  const coded = (code: string, text: string): Error => Object.assign(new Error(text), { code });
+  if (/maximum mime nesting depth/i.test(msg)) return coded('mime-nesting-limit', `The message nests MIME parts deeper than the parser allows (${msg}). The evidence is preserved; inspect the raw message.`);
+  if (/maximum header size/i.test(msg)) return coded('header-size-limit', `A header block is larger than the parser allows (${msg}). The evidence is preserved; inspect the raw message.`);
+  return null;
+}
+
 async function runAnalyze(t: Extract<WorkerTask, { kind: 'analyze' }>): Promise<AnalyzeOutput> {
   const store = new BlobStore(t.dataDir);
   const bytes = await store.read(t.blobStore, t.blobSha256, true);
   const is = intel(t.intelDbPath);
   const started = performance.now();
-  const report = await analyzeEmail(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength), {
-    intel: is ? intelProvider(is) : null,
-    dkimKeyResolver: t.dkimDns ? resolveDkim : null,
-    thresholds: t.thresholds,
-  });
+  let report: Awaited<ReturnType<typeof analyzeEmail>>;
+  try {
+    report = await analyzeEmail(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength), {
+      intel: is ? intelProvider(is) : null,
+      dkimKeyResolver: t.dkimDns ? resolveDkim : null,
+      thresholds: t.thresholds,
+    });
+  } catch (e) {
+    throw parserLimit(e) ?? e;
+  }
   const notes: string[] = [];
   if (t.derivation === 'reconstructed-from-msg') {
     // The MIME body was synthesised from Outlook properties: a DKIM body-hash mismatch is expected

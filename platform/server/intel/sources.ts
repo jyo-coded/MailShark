@@ -333,10 +333,11 @@ const openphish: Connector = {
   attribution: 'indicator-only',
   access: 'public',
   intervalHours: 12,
-  hosts: ['openphish.com'],
+  // openphish.com/feed.txt now answers with a 302 to the project's GitHub repository; fetch that directly.
+  hosts: ['raw.githubusercontent.com'],
   defaultEnabled: true,
   async sync(ctx) {
-    const res = await download(ctx, this, 'https://openphish.com/feed.txt');
+    const res = await download(ctx, this, 'https://raw.githubusercontent.com/openphish/public_feed/refs/heads/main/feed.txt');
     if (res.notModified) return notModified(ctx);
     const now = Date.now();
     const rows: IndicatorRow[] = [];
@@ -708,6 +709,8 @@ class RateLimiter {
 const otxLimiter = new RateLimiter(60, 60_000);
 const vtLimiter = new RateLimiter(4, 60_000);
 const abusechLimiter = new RateLimiter(30, 60_000);
+// Your own MISP server: polite default; TLS is always verified (use NODE_EXTRA_CA_CERTS for a private CA).
+const mispLimiter = new RateLimiter(60, 60_000);
 
 const otx: Connector = {
   id: 'otx',
@@ -716,7 +719,7 @@ const otx: Connector = {
   kind: 'lookup',
   homepage: 'https://otx.alienvault.com/api',
   license: 'Free; OTX terms of service. An API key (OTX_API_KEY) raises rate limits.',
-  provides: 'Pulses: community and vendor reports that group indicators into named campaigns, with adversary, malware family, tags and references.',
+  provides: 'Pulses: community and vendor reports, from named campaign write-ups (adversary, malware family, references) to automated daily indicator dumps, which are recognised and treated as listings, not campaigns.',
   attribution: 'campaign-events',
   access: 'key-optional',
   intervalHours: 0,
@@ -817,7 +820,7 @@ const mispInstance: Connector = {
   lookupTypes: ['domain', 'ip', 'url', 'email', 'md5', 'sha1', 'sha256', 'btc', 'phone'],
   async lookup(ctx, _type, value) {
     const base = ctx.config.mispUrl as string;
-    await abusechLimiter.take();
+    await mispLimiter.take();
     const res = await fetchResource(`${base}/attributes/restSearch`, {
       allowedHosts: [new URL(base).hostname],
       allowHttp: base.startsWith('http:'),

@@ -11,7 +11,6 @@ export interface IntelConfig {
   virusTotalApiKey: string | null;
   mispUrl: string | null;
   mispApiKey: string | null;
-  mispVerifyTls: boolean;
   abusechAuthKey: string | null;
   phishtankAppKey: string | null;
   /** Download the full MalwareBazaar hash export (~225 MB zip) instead of the 48-hour window. */
@@ -44,6 +43,8 @@ export interface Config {
   workerHeapMb: number;
   session: { idleMinutes: number; maxHours: number };
   thresholds: { caution: number; danger: number; coverageFloor: number };
+  /** Campaign correlation: probable-edge threshold, exact (single-artifact) threshold, Louvain resolution. */
+  correlation: { edgeThreshold: number; exactThreshold: number; resolution: number };
   /** Global switch for anything that sends case indicators to third parties (still opt-in per case). */
   allowOnlineLookups: boolean;
   /** Allow DKIM key lookups over DNS when a case enables online lookups. */
@@ -111,6 +112,11 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
       danger: num('MAILSHARK_DANGER_AT', 70, 1, 99),
       coverageFloor: num('MAILSHARK_COVERAGE_FLOOR', 0.5, 0, 1),
     },
+    correlation: {
+      edgeThreshold: num('MAILSHARK_CORR_EDGE', 0.6, 0.05, 1),
+      exactThreshold: num('MAILSHARK_CORR_EXACT', 0.75, 0.05, 1),
+      resolution: num('MAILSHARK_CORR_RESOLUTION', 1, 0.1, 10),
+    },
     allowOnlineLookups: bool('MAILSHARK_ALLOW_ONLINE_LOOKUPS', true),
     allowDkimDns: bool('MAILSHARK_ALLOW_DKIM_DNS', true),
     intel: {
@@ -119,7 +125,6 @@ export function loadConfig(overrides: Partial<Config> = {}): Config {
       virusTotalApiKey: str('VT_API_KEY'),
       mispUrl: misp ? misp.replace(/\/+$/, '') : null,
       mispApiKey: str('MISP_API_KEY'),
-      mispVerifyTls: bool('MISP_VERIFY_TLS', true),
       abusechAuthKey: str('ABUSECH_AUTH_KEY'),
       phishtankAppKey: str('PHISHTANK_APP_KEY'),
       bazaarFull: bool('MAILSHARK_BAZAAR_FULL', false),

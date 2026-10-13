@@ -1,0 +1,382 @@
+{
+  "generatedAt": "2026-10-13T02:59:54.989Z",
+  "engine": "1.2.0",
+  "thresholds": {
+    "caution": 35,
+    "danger": 70,
+    "coverageFloor": 0.5
+  },
+  "note": "Engine heuristics were developed with access to these corpora; the content-hash split guards against threshold tuning on the holdout, not against design-time exposure. See VALIDATION.md.",
+  "blockedSamples": 0,
+  "seconds": 240,
+  "all": {
+    "messages": 16228,
+    "phishing": 12078,
+    "legitimate": 4150,
+    "recallFlaggedPct": 74.8,
+    "falsePositiveRatePct": 1,
+    "falseNegativeRatePct": 25.2,
+    "precisionFlaggedPct": 99.6,
+    "maliciousPrecisionPct": 99.8,
+    "maliciousRecallPct": 52.5,
+    "legitimateCalledMaliciousPct": 0.3,
+    "benignNpvPct": 57.5,
+    "inconclusivePct": {
+      "phishing": 0.1,
+      "legitimate": 0
+    },
+    "failed": 0,
+    "confusion": {
+      "phish": {
+        "benign": 3033,
+        "malicious": 6340,
+        "suspicious": 2698,
+        "inconclusive": 7
+      },
+      "ham": {
+        "benign": 4110,
+        "suspicious": 28,
+        "malicious": 12
+      }
+    },
+    "byConfidence": {
+      "malicious/high": {
+        "n": 5355,
+        "correctPct": 100
+      },
+      "malicious/medium": {
+        "n": 996,
+        "correctPct": 99
+      },
+      "malicious/low": {
+        "n": 1,
+        "correctPct": 100
+      },
+      "benign/high": {
+        "n": 3779,
+        "correctPct": 85.4
+      },
+      "benign/medium": {
+        "n": 2711,
+        "correctPct": 28.4
+      },
+      "benign/low": {
+        "n": 653,
+        "correctPct": 17.2
+      }
+    },
+    "benignHigh": {
+      "shareOfLegitimatePct": 77.8,
+      "shareOfPhishingPct": 4.6,
+      "note": "precision of \"benign, high\" if phishing made up 1% / 10% of the input (derived from the two rates above)",
+      "precisionAtPrevalence1Pct": 99.9,
+      "precisionAtPrevalence10Pct": 99.3
+    }
+  },
+  "tune": {
+    "messages": 11261,
+    "phishing": 8348,
+    "legitimate": 2913,
+    "recallFlaggedPct": 74.8,
+    "falsePositiveRatePct": 0.9,
+    "falseNegativeRatePct": 25.2,
+    "precisionFlaggedPct": 99.6,
+    "maliciousPrecisionPct": 99.8,
+    "maliciousRecallPct": 52.3,
+    "legitimateCalledMaliciousPct": 0.2,
+    "benignNpvPct": 57.8,
+    "inconclusivePct": {
+      "phishing": 0,
+      "legitimate": 0
+    },
+    "failed": 0,
+    "confusion": {
+      "phish": {
+        "benign": 2104,
+        "malicious": 4362,
+        "suspicious": 1879,
+        "inconclusive": 3
+      },
+      "ham": {
+        "benign": 2886,
+        "suspicious": 20,
+        "malicious": 7
+      }
+    },
+    "byConfidence": {
+      "malicious/high": {
+        "n": 3703,
+        "correctPct": 99.9
+      },
+      "malicious/medium": {
+        "n": 665,
+        "correctPct": 99.2
+      },
+      "malicious/low": {
+        "n": 1,
+        "correctPct": 100
+      },
+      "benign/high": {
+        "n": 2656,
+        "correctPct": 85.4
+      },
+      "benign/medium": {
+        "n": 1889,
+        "correctPct": 28.5
+      },
+      "benign/low": {
+        "n": 445,
+        "correctPct": 17.8
+      }
+    },
+    "benignHigh": {
+      "shareOfLegitimatePct": 77.9,
+      "shareOfPhishingPct": 4.6,
+      "note": "precision of \"benign, high\" if phishing made up 1% / 10% of the input (derived from the two rates above)",
+      "precisionAtPrevalence1Pct": 99.9,
+      "precisionAtPrevalence10Pct": 99.3
+    }
+  },
+  "holdout": {
+    "messages": 4967,
+    "phishing": 3730,
+    "legitimate": 1237,
+    "recallFlaggedPct": 75,
+    "falsePositiveRatePct": 1.1,
+    "falseNegativeRatePct": 25,
+    "precisionFlaggedPct": 99.5,
+    "maliciousPrecisionPct": 99.7,
+    "maliciousRecallPct": 53,
+    "legitimateCalledMaliciousPct": 0.4,
+    "benignNpvPct": 56.9,
+    "inconclusivePct": {
+      "phishing": 0.1,
+      "legitimate": 0
+    },
+    "failed": 0,
+    "confusion": {
+      "phish": {
+        "malicious": 1978,
+        "suspicious": 819,
+        "benign": 929,
+        "inconclusive": 4
+      },
+      "ham": {
+        "benign": 1224,
+        "malicious": 5,
+        "suspicious": 8
+      }
+    },
+    "byConfidence": {
+      "malicious/high": {
+        "n": 1652,
+        "correctPct": 100
+      },
+      "malicious/medium": {
+        "n": 331,
+        "correctPct": 98.5
+      },
+      "malicious/low": {
+        "n": 0,
+        "correctPct": null
+      },
+      "benign/high": {
+        "n": 1123,
+        "correctPct": 85.5
+      },
+      "benign/medium": {
+        "n": 822,
+        "correctPct": 28.1
+      },
+      "benign/low": {
+        "n": 208,
+        "correctPct": 15.9
+      }
+    },
+    "benignHigh": {
+      "shareOfLegitimatePct": 77.6,
+      "shareOfPhishingPct": 4.4,
+      "note": "precision of \"benign, high\" if phishing made up 1% / 10% of the input (derived from the two rates above)",
+      "precisionAtPrevalence1Pct": 99.9,
+      "precisionAtPrevalence10Pct": 99.4
+    }
+  },
+  "perDataset": {
+    "nazario": {
+      "messages": 3466,
+      "phishing": 3466,
+      "legitimate": 0,
+      "recallFlaggedPct": 86.6,
+      "falsePositiveRatePct": null,
+      "falseNegativeRatePct": 13.4,
+      "precisionFlaggedPct": 100,
+      "maliciousPrecisionPct": 100,
+      "maliciousRecallPct": 71.5,
+      "legitimateCalledMaliciousPct": null,
+      "benignNpvPct": 0,
+      "inconclusivePct": {
+        "phishing": 0.1,
+        "legitimate": null
+      },
+      "failed": 0,
+      "confusion": {
+        "phish": {
+          "benign": 460,
+          "malicious": 2477,
+          "suspicious": 524,
+          "inconclusive": 5
+        }
+      },
+      "byConfidence": {
+        "malicious/high": {
+          "n": 1853,
+          "correctPct": 100
+        },
+        "malicious/medium": {
+          "n": 623,
+          "correctPct": 100
+        },
+        "malicious/low": {
+          "n": 1,
+          "correctPct": 100
+        },
+        "benign/high": {
+          "n": 73,
+          "correctPct": 0
+        },
+        "benign/medium": {
+          "n": 275,
+          "correctPct": 0
+        },
+        "benign/low": {
+          "n": 112,
+          "correctPct": 0
+        }
+      },
+      "benignHigh": {
+        "shareOfLegitimatePct": null,
+        "shareOfPhishingPct": 2.1,
+        "note": "precision of \"benign, high\" if phishing made up 1% / 10% of the input (derived from the two rates above)",
+        "precisionAtPrevalence1Pct": null,
+        "precisionAtPrevalence10Pct": null
+      }
+    },
+    "phishing_pot": {
+      "messages": 8612,
+      "phishing": 8612,
+      "legitimate": 0,
+      "recallFlaggedPct": 70.1,
+      "falsePositiveRatePct": null,
+      "falseNegativeRatePct": 29.9,
+      "precisionFlaggedPct": 100,
+      "maliciousPrecisionPct": 100,
+      "maliciousRecallPct": 44.9,
+      "legitimateCalledMaliciousPct": null,
+      "benignNpvPct": 0,
+      "inconclusivePct": {
+        "phishing": 0,
+        "legitimate": null
+      },
+      "failed": 0,
+      "confusion": {
+        "phish": {
+          "malicious": 3863,
+          "suspicious": 2174,
+          "benign": 2573,
+          "inconclusive": 2
+        }
+      },
+      "byConfidence": {
+        "malicious/high": {
+          "n": 3500,
+          "correctPct": 100
+        },
+        "malicious/medium": {
+          "n": 363,
+          "correctPct": 100
+        },
+        "malicious/low": {
+          "n": 0,
+          "correctPct": null
+        },
+        "benign/high": {
+          "n": 478,
+          "correctPct": 0
+        },
+        "benign/medium": {
+          "n": 1666,
+          "correctPct": 0
+        },
+        "benign/low": {
+          "n": 429,
+          "correctPct": 0
+        }
+      },
+      "benignHigh": {
+        "shareOfLegitimatePct": null,
+        "shareOfPhishingPct": 5.6,
+        "note": "precision of \"benign, high\" if phishing made up 1% / 10% of the input (derived from the two rates above)",
+        "precisionAtPrevalence1Pct": null,
+        "precisionAtPrevalence10Pct": null
+      }
+    },
+    "spamassassin": {
+      "messages": 4150,
+      "phishing": 0,
+      "legitimate": 4150,
+      "recallFlaggedPct": null,
+      "falsePositiveRatePct": 1,
+      "falseNegativeRatePct": null,
+      "precisionFlaggedPct": 0,
+      "maliciousPrecisionPct": 0,
+      "maliciousRecallPct": null,
+      "legitimateCalledMaliciousPct": 0.3,
+      "benignNpvPct": 100,
+      "inconclusivePct": {
+        "phishing": null,
+        "legitimate": 0
+      },
+      "failed": 0,
+      "confusion": {
+        "ham": {
+          "benign": 4110,
+          "suspicious": 28,
+          "malicious": 12
+        }
+      },
+      "byConfidence": {
+        "malicious/high": {
+          "n": 2,
+          "correctPct": 0
+        },
+        "malicious/medium": {
+          "n": 10,
+          "correctPct": 0
+        },
+        "malicious/low": {
+          "n": 0,
+          "correctPct": null
+        },
+        "benign/high": {
+          "n": 3228,
+          "correctPct": 100
+        },
+        "benign/medium": {
+          "n": 770,
+          "correctPct": 100
+        },
+        "benign/low": {
+          "n": 112,
+          "correctPct": 100
+        }
+      },
+      "benignHigh": {
+        "shareOfLegitimatePct": 77.8,
+        "shareOfPhishingPct": null,
+        "note": "precision of \"benign, high\" if phishing made up 1% / 10% of the input (derived from the two rates above)",
+        "precisionAtPrevalence1Pct": null,
+        "precisionAtPrevalence10Pct": null
+      }
+    }
+  }
+}

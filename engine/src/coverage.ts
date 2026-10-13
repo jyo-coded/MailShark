@@ -15,6 +15,8 @@ export interface CoverageInputs {
   html: HtmlAnalysis;
   structure: StructureAnalysis;
   links: LinkAnalysis[];
+  /** Set when the message had more distinct links than the engine analyses. */
+  linksCapped?: { analyzed: number; distinct: number } | null;
   attachments: AttachmentAnalysis[];
 }
 
@@ -61,7 +63,9 @@ export function assessCoverage(x: CoverageInputs): EvidenceCoverage {
   );
 
   layers.push(
-    x.links.length
+    x.linksCapped
+      ? { id: 'links', label: 'Links', status: 'partial', weight: 0.15, note: `${x.linksCapped.analyzed} of ${x.linksCapped.distinct} distinct links analysed (not visited); the rest exceeded the analysis limit.` }
+      : x.links.length
       ? { id: 'links', label: 'Links', status: 'available', weight: 0.15, note: `${x.links.length} links extracted and analysed (not visited).` }
       : { id: 'links', label: 'Links', status: 'not-applicable', weight: 0.15, note: 'No links in the message.' },
   );

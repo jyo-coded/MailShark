@@ -30,16 +30,21 @@ function asciiHead(bytes: Uint8Array, n = 8192): string {
 }
 
 function looksLikeHeaderBlock(text: string): boolean {
-  const lines = text.split(/\r?\n/);
+  const all = text.split(/\r?\n/);
+  const lines = all.slice(0, 80);
+  // The last line may be cut off: by the detection window (the first 8 KB) or because the file
+  // itself is truncated. An unterminated final line counts if it starts like a header and is
+  // otherwise ignored: it is not evidence against a header block.
+  const cut = all.length > 1 && !text.endsWith('\n') ? all.length - 1 : -1;
   let headers = 0;
   let known = 0;
-  for (const line of lines.slice(0, 80)) {
+  for (const [i, line] of lines.entries()) {
     if (line === '') break;
     if (/^[ \t]/.test(line)) continue;
     if (/^[!-9;-~]+:/.test(line)) {
       headers++;
       if (HEADER_NAMES.test(line)) known++;
-    } else return false;
+    } else if (i !== cut) return false;
   }
   return headers >= 2 && known >= 1;
 }

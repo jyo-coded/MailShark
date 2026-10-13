@@ -269,7 +269,7 @@ export class Processor {
       return;
     }
     const out = await this.d.pool.run<CorrelationResult & { external: { matches: ExternalMatch[]; campaigns: ExternalCampaign[] }; intelSnapshot: string | null }>(
-      { kind: 'correlate', caseDbPath: this.d.caseDbPath, intelDbPath: this.d.intelDbPath, caseId, config: {} },
+      { kind: 'correlate', caseDbPath: this.d.caseDbPath, intelDbPath: this.d.intelDbPath, caseId, config: { ...this.d.cfg.correlation } },
       this.d.cfg.correlateTimeoutMs,
     );
     this.persistCorrelation(caseId, out);
@@ -316,7 +316,7 @@ export class Processor {
           c.verdict,
           JSON.stringify({ clusterKey: c.id, members, density: c.density, exactEdges: c.exactEdges, profile: c.profile, sharedIndicators: c.sharedIndicators }),
           JSON.stringify(ext),
-          'louvain over specificity-weighted indicator evidence + layered similarity',
+          `louvain over specificity-weighted indicator evidence + layered similarity (edge ≥ ${this.d.cfg.correlation.edgeThreshold}, exact ≥ ${this.d.cfg.correlation.exactThreshold}, resolution ${this.d.cfg.correlation.resolution})`,
           now,
         );
         for (const m of members) db.run('UPDATE messages SET cluster_id = ? WHERE id = ?', `${caseId.slice(-6)}-${c.id}`, m.id);

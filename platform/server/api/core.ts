@@ -88,7 +88,22 @@ export function registerCore(app: FastifyInstance, ctx: AppContext): void {
 
   app.get('/api/auth/session', async (req) => {
     if (!req.session) return { user: null, csrf: null, setupNeeded: ctx.auth.userCount() === 0 };
-    return { user: publicUser(req.session.user), csrf: req.session.csrf, setupNeeded: false, expiresAt: req.session.expiresAt };
+    const l = ctx.cfg.limits;
+    return {
+      user: publicUser(req.session.user),
+      csrf: req.session.csrf,
+      setupNeeded: false,
+      expiresAt: req.session.expiresAt,
+      // What the client needs to validate uploads before sending them (the server enforces the same limits).
+      platform: {
+        version: PLATFORM_VERSION,
+        engine: ENGINE_VERSION,
+        limits: { filesPerBatch: l.filesPerBatch, fileBytes: l.fileBytes, batchBytes: l.batchBytes, messagesPerContainer: l.messagesPerContainer },
+        formats: ['eml', 'emlx', 'mbox', 'msg'],
+        onlineLookupsAllowed: ctx.cfg.allowOnlineLookups,
+        thresholds: ctx.cfg.thresholds,
+      },
+    };
   });
 
   app.post('/api/auth/password', async (req) => {

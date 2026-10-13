@@ -57,12 +57,16 @@ export function classify(
     confidence = margin >= 10 && coverage.score >= 0.5 ? 'medium' : 'low';
     rationale.push('Suspicious is a call for review: confidence is never "high" for this class.');
   } else if (cls === 'benign') {
+    // "No findings" is weak evidence: high confidence needs a clear margin, near-complete evidence and
+    // not a single positive finding above informational (engine 1.2; see VALIDATION.md for why).
     const margin = thresholds.caution - score;
+    const lowPlus = positives.some((f) => SEV[f.severity] >= 1);
     const mediumPlus = positives.some((f) => SEV[f.severity] >= 2);
-    if (margin >= 20 && coverage.score >= 0.8 && !mediumPlus) confidence = 'high';
+    if (margin >= 20 && coverage.score >= 0.8 && !lowPlus) confidence = 'high';
     else if (margin < 10 || coverage.score < 0.6) confidence = 'low';
     else confidence = 'medium';
     if (mediumPlus) rationale.push('Some medium-severity findings were present but outweighed.');
+    else if (lowPlus) rationale.push('Low-severity findings were present but outweighed.');
   } else {
     confidence = 'low';
   }

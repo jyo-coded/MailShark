@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Client, multipart, startPlatform, waitFor, type TestPlatform } from './helpers';
 import { REPORT_JSON_SCHEMA } from '../server/reports/schema';
 import { verifyReportHash, type ForensicReport } from '../server/reports/model';
+import { ENGINE_VERSION } from '../../engine/src/analyze';
 
 const FX = join(__dirname, '..', '..', 'fixtures', 'eml');
 const fixtures = readdirSync(FX).filter((f) => f.endsWith('.eml')).sort();
@@ -47,6 +48,23 @@ describe('setup and authentication', () => {
     expect(noCsrf.statusCode).toBe(403);
     expect(JSON.parse(noCsrf.body).error.code).toBe('csrf');
   });
+
+  it('locks an account after 8 failed sign-ins, even for the right password, and records it', async () => {
+    const own = await startPlatform();
+    try {
+      const c = new Client(own.app);
+      await c.call('POST', '/api/setup', { token: own.ctx.setupToken, username: 'admin', password: PASSWORD, displayName: 'A' });
+      for (let i = 0; i < 7; i++) expect((await c.call('POST', '/api/auth/login', { username: 'admin', password: `wrong-${i}-password` })).json().error.code).toBe('invalid-credentials');
+      expect((await c.call('POST', '/api/auth/login', { username: 'admin', password: 'wrong-8-password' })).json().error.code).toBe('locked');
+      const right = await c.call('POST', '/api/auth/login', { username: 'admin', password: PASSWORD });
+      expect(right.status).toBe(401);
+      expect(right.json().error.code).toBe('locked');
+      const failures = own.ctx.audit.list({ limit: 50 }).filter((a) => a.action === 'auth.login-failed');
+      expect(failures.length).toBe(9);
+    } finally {
+      await own.close();
+    }
+  }, 60_000);
 
   it('sends hardened security headers', async () => {
     const r = await admin.call('GET', '/api/health');
@@ -118,7 +136,7 @@ describe('evidence intake and analysis', () => {
     expect(d.provenance.derivation).toBe('original');
     expect(d.report.classification.class).toBe('malicious');
     expect(Object.keys(d.findingDocs).length).toBeGreaterThan(3);
-    expect(d.processing.engineVersion).toBe('1.1.0');
+    expect(d.processing.engineVersion).toBe(ENGINE_VERSION);
     expect(d.history.map((h: { kind: string }) => h.kind)).toEqual(expect.arrayContaining(['queued', 'analysis-started', 'analyzed']));
     const raw = (await admin.call('GET', `/api/cases/${caseId}/messages/${id}/raw`)).json();
     expect(raw.headers.find((h: { name: string }) => h.name === 'From')).toBeDefined();
@@ -211,6 +229,74 @@ describe('reports', () => {
   });
 });
 
+describe('dashboard endpoints', () => {
+  it('renders several formats from one report build (shared report id and data hash)', async () => {
+    const r = await admin.call('POST', `/api/cases/${caseId}/reports`, { formats: ['json', 'md', 'docx'], scope: 'case' });
+    expect(r.status).toBe(201);
+    const out = r.json() as { reportId: string; dataSha256: string; files: { id: string; format: string; dataSha256: string; reportId: string; fileSha256: string }[] };
+    expect(out.files.map((f) => f.format)).toEqual(['json', 'md', 'docx']);
+    expect(new Set(out.files.map((f) => f.dataSha256)).size).toBe(1);
+    expect(new Set(out.files.map((f) => f.reportId)).size).toBe(1);
+    expect(new Set(out.files.map((f) => f.fileSha256)).size).toBe(3);
+    const json = JSON.parse((await admin.call('GET', `/api/cases/${caseId}/reports/${out.files[0]!.id}/download`)).body) as ForensicReport;
+    expect(json.integrity.dataSha256).toBe(out.dataSha256);
+    expect(verifyReportHash(json)).toBe(true);
+    const md = (await admin.call('GET', `/api/cases/${caseId}/reports/${out.files[1]!.id}/download`)).body;
+    expect(md).toContain(out.dataSha256);
+    const xml = strFromU8(unzipSync(new Uint8Array((await admin.call('GET', `/api/cases/${caseId}/reports/${out.files[2]!.id}/download`)).raw))['word/document.xml'] as Uint8Array);
+    expect(xml).toContain(out.dataSha256);
+    expect((await admin.call('POST', `/api/cases/${caseId}/reports`, { formats: ['json', 'pdf'] })).status).toBe(400);
+  });
+
+  it('computes overview statistics from the stored results', async () => {
+    const st = (await admin.call('GET', `/api/cases/${caseId}/stats`)).json();
+    const sum = st.timeline.buckets.reduce((n: number, b: { malicious: number; suspicious: number; other: number }) => n + b.malicious + b.suspicious + b.other, 0);
+    const list = (await admin.call('GET', `/api/cases/${caseId}/messages?status=analyzed,failed&pageSize=500`)).json();
+    expect(sum).toBe(list.total);
+    expect(st.topFindings.length).toBeGreaterThan(0);
+    for (const f of st.topFindings) expect(f.messages).toBeGreaterThan(0);
+    expect(st.clusters.some((c: { verdict: string }) => c.verdict === 'threat')).toBe(true);
+  });
+
+  it('serves the method catalogue with the live thresholds', async () => {
+    const cat = (await admin.call('GET', '/api/catalog')).json();
+    expect(Object.keys(cat.findings).length).toBeGreaterThan(50);
+    expect(cat.thresholds).toEqual(p.ctx.cfg.thresholds);
+    expect(cat.correlation.edgeThreshold).toBe(p.ctx.cfg.correlation.edgeThreshold);
+    expect(cat.correlation.families['attachment'].base).toBeGreaterThan(0.9);
+  });
+
+  it('filters the graph by message severity', async () => {
+    const g = (await admin.call('GET', `/api/cases/${caseId}/graph?severities=critical,high&types=message`)).json();
+    const msgs = g.nodes.filter((n: { kind: string }) => n.kind === 'message');
+    expect(msgs.length).toBeGreaterThan(0);
+    for (const m of msgs) expect(['critical', 'high']).toContain(m.severity);
+  });
+
+  it('filters indicators to those with an intelligence match (not by the message-level count)', async () => {
+    const all = (await admin.call('GET', `/api/cases/${caseId}/indicators?pageSize=1000`)).json();
+    const target = all.items.find((i: { type: string }) => i.type === 'hostname') as { id: number };
+    const obs = p.ctx.db.get<{ message_id: string }>('SELECT message_id FROM observations WHERE case_id = ? AND indicator_id = ? LIMIT 1', caseId, target.id) as { message_id: string };
+    p.ctx.db.run(
+      'INSERT INTO intel_matches (case_id, message_id, indicator_id, source, match_type, matched_value, record_json, event_id, strength, matched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      caseId, obs.message_id, target.id, 'test-feed', 'host', 'x', '{}', null, 0.9, Date.now(),
+    );
+    p.ctx.db.run('UPDATE messages SET intel_hits = 1 WHERE id = ?', obs.message_id);
+    const only = (await admin.call('GET', `/api/cases/${caseId}/indicators?intel=1`)).json();
+    expect(only.total).toBe(1);
+    expect(only.items.map((i: { id: number }) => i.id)).toEqual([target.id]);
+    expect(only.items[0].intelSources).toEqual(['test-feed']);
+    p.ctx.db.run("DELETE FROM intel_matches WHERE source = 'test-feed'");
+    p.ctx.db.run('UPDATE messages SET intel_hits = 0 WHERE id = ?', obs.message_id);
+  });
+
+  it('exposes upload limits to the signed-in client', async () => {
+    const s = (await admin.call('GET', '/api/auth/session')).json();
+    expect(s.platform.limits.filesPerBatch).toBe(100);
+    expect(s.platform.formats).toEqual(['eml', 'emlx', 'mbox', 'msg']);
+  });
+});
+
 describe('access control and limits', () => {
   const other = (): Client => new Client(p.app);
 
@@ -292,6 +378,31 @@ describe('resilience', () => {
     expect(events).toEqual(expect.arrayContaining(['received', 'resumed-after-interruption', 'expanded']));
     await fresh.stop();
   }, 90_000);
+
+  it('reports parser limits with a specific code and does not retry them', async () => {
+    let body = 'Content-Type: text/plain\r\n\r\ninnermost\r\n';
+    for (let i = 0; i < 300; i++) body = `Content-Type: multipart/mixed; boundary="b${i}"\r\n\r\n--b${i}\r\n${body}--b${i}--\r\n`;
+    const eml = `From: nest@example.com\r\nTo: v@example.com\r\nSubject: deep nesting\r\nMIME-Version: 1.0\r\n${body}`;
+    const own = await startPlatform();
+    try {
+      const c = new Client(own.app);
+      await c.call('POST', '/api/setup', { token: own.ctx.setupToken, username: 'admin', password: PASSWORD, displayName: 'A' });
+      await c.login('admin', PASSWORD);
+      const cs = (await c.call('POST', '/api/cases', { name: 'Parser limits' })).json();
+      const mp = multipart([{ name: 'deep.eml', content: eml }, { name: 'ok.eml', content: read('legit-newsletter.eml') }]);
+      expect((await c.call('POST', `/api/cases/${cs.id}/batches`, mp.payload, mp.headers)).status).toBe(201);
+      await waitFor(async () => (await c.call('GET', `/api/cases/${cs.id}/progress`)).json().done === true, 120_000);
+      const items = (await c.call('GET', `/api/cases/${cs.id}/messages`)).json().items as { id: string; evidenceName: string; status: string; error: { code: string } | null }[];
+      const deep = items.find((m) => m.evidenceName === 'deep.eml');
+      expect(deep?.status).toBe('failed');
+      expect(deep?.error?.code).toBe('mime-nesting-limit');
+      const hist = (await c.call('GET', `/api/cases/${cs.id}/messages/${deep?.id}/history`)).json() as { kind: string }[];
+      expect(hist.filter((h) => h.kind === 'retry-scheduled')).toHaveLength(0);
+      expect(items.find((m) => m.evidenceName === 'ok.eml')?.status).toBe('analyzed');
+    } finally {
+      await own.close();
+    }
+  }, 150_000);
 
   it('isolates failures: a message that cannot be analysed in time fails alone, with a recorded reason', async () => {
     const slow = await startPlatform((cfg) => {

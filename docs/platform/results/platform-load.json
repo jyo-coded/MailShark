@@ -1,0 +1,245 @@
+{
+  "server": "http://127.0.0.1:7380",
+  "startedAt": "2026-10-13T02:51:51.604Z",
+  "health": {
+    "status": "ok",
+    "version": "1.0.0",
+    "engine": "1.2.0",
+    "uptimeSec": 11,
+    "database": "ok",
+    "workers": {
+      "size": 8,
+      "busy": 0,
+      "queued": 0
+    },
+    "queue": {
+      "queued": 0,
+      "running": 0,
+      "failed24h": 2
+    },
+    "intel": {
+      "current": 12,
+      "stale": 0,
+      "unavailable": 1,
+      "total": 14
+    }
+  },
+  "scenarios": {
+    "batch100": {
+      "files": 100,
+      "bytes": 5292532,
+      "uploadStatus": 201,
+      "uploadMs": 355,
+      "accepted": 100,
+      "processingMs": 5604,
+      "messages": {
+        "queued": 0,
+        "running": 0,
+        "analyzed": 100,
+        "failed": 0,
+        "duplicate": 0,
+        "total": 100
+      },
+      "messagesPerSecond": 16.8,
+      "timedOut": false
+    },
+    "concurrent4x25": {
+      "uploadStatuses": [
+        201,
+        201,
+        201,
+        201
+      ],
+      "uploadMs": [
+        274,
+        262,
+        274,
+        328
+      ],
+      "wallMs": 2927,
+      "messages": 100,
+      "analyzed": 100,
+      "failed": 0,
+      "messagesPerSecond": 34.2
+    },
+    "oversized": {
+      "bytes": 62914560,
+      "uploadStatus": 201,
+      "uploadMs": 326,
+      "outcomes": [
+        {
+          "name": "oversized.eml",
+          "status": "rejected",
+          "error": "file-too-large"
+        },
+        {
+          "name": "sample-412.eml",
+          "status": "stored",
+          "error": null
+        },
+        {
+          "name": "sample-4495.eml",
+          "status": "stored",
+          "error": null
+        }
+      ],
+      "processingMs": 2047,
+      "messages": {
+        "queued": 0,
+        "running": 0,
+        "analyzed": 2,
+        "failed": 0,
+        "duplicate": 0,
+        "total": 2
+      }
+    },
+    "malformed": {
+      "uploadStatus": 201,
+      "uploadMs": 66,
+      "processingMs": 5081,
+      "timedOut": false,
+      "perFile": [
+        {
+          "name": "deep-nesting-300.eml",
+          "evidence": "expanded",
+          "error": null,
+          "messages": [
+            {
+              "status": "failed",
+              "class": "failed",
+              "error": "mime-nesting-limit"
+            }
+          ]
+        },
+        {
+          "name": "fake-ole.msg",
+          "evidence": "rejected",
+          "error": "ole-not-msg",
+          "messages": []
+        },
+        {
+          "name": "header-line-2mb.eml",
+          "evidence": "expanded",
+          "error": null,
+          "messages": [
+            {
+              "status": "failed",
+              "class": "failed",
+              "error": "header-size-limit"
+            }
+          ]
+        },
+        {
+          "name": "html-script-bomb.eml",
+          "evidence": "expanded",
+          "error": null,
+          "messages": [
+            {
+              "status": "analyzed",
+              "class": "inconclusive",
+              "error": null
+            }
+          ]
+        },
+        {
+          "name": "invalid-base64.eml",
+          "evidence": "expanded",
+          "error": null,
+          "messages": [
+            {
+              "status": "analyzed",
+              "class": "inconclusive",
+              "error": null
+            }
+          ]
+        },
+        {
+          "name": "link-flood.eml",
+          "evidence": "expanded",
+          "error": null,
+          "messages": [
+            {
+              "status": "analyzed",
+              "class": "inconclusive",
+              "error": null
+            }
+          ]
+        },
+        {
+          "name": "mbox-garbage.mbox",
+          "evidence": "rejected",
+          "error": "binary-not-email",
+          "messages": []
+        },
+        {
+          "name": "nul-bytes.eml",
+          "evidence": "rejected",
+          "error": "binary-not-email",
+          "messages": []
+        },
+        {
+          "name": "truncated.eml",
+          "evidence": "rejected",
+          "error": "unsupported-format",
+          "messages": []
+        },
+        {
+          "name": "twenty-thousand-headers.eml",
+          "evidence": "expanded",
+          "error": null,
+          "messages": [
+            {
+              "status": "analyzed",
+              "class": "inconclusive",
+              "error": null
+            }
+          ]
+        },
+        {
+          "name": "utf16.eml",
+          "evidence": "rejected",
+          "error": "unsupported-encoding",
+          "messages": []
+        },
+        {
+          "name": "zip-bomb-200mb.eml",
+          "evidence": "expanded",
+          "error": null,
+          "messages": [
+            {
+              "status": "analyzed",
+              "class": "inconclusive",
+              "error": null
+            }
+          ]
+        }
+      ],
+      "allTerminal": true,
+      "serverHealthyAfter": true
+    }
+  },
+  "finishedAt": "2026-10-13T02:52:09.862Z",
+  "healthAfter": {
+    "status": "ok",
+    "version": "1.0.0",
+    "engine": "1.2.0",
+    "uptimeSec": 29,
+    "database": "ok",
+    "workers": {
+      "size": 8,
+      "busy": 0,
+      "queued": 0
+    },
+    "queue": {
+      "queued": 0,
+      "running": 0,
+      "failed24h": 4
+    },
+    "intel": {
+      "current": 12,
+      "stale": 0,
+      "unavailable": 1,
+      "total": 14
+    }
+  }
+}

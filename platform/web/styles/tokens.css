@@ -1,0 +1,166 @@
+/* MailShark Forensic Platform: design tokens.
+   A restrained, instrument-like palette: colour encodes classification and state, never decoration. */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist-latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist-latin-ext.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/geist-mono-latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'Geist Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 19px;
+  --fs-2xl: 24px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+
+  --row-h: 28px;
+  --topbar-h: 48px;
+  --nav-w: 216px;
+  --nav-w-collapsed: 52px;
+
+  --dur: 140ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Dark (default): graphite surfaces, high-legibility text, teal for interaction. */
+:root,
+[data-theme='dark'] {
+  --bg: #0d1014;
+  --bg-sunken: #0a0c0f;
+  --panel: #13171c;
+  --panel-2: #181d23;
+  --raised: #1d232a;
+  --hover: #222931;
+  --line: #262d36;
+  --line-2: #313945;
+  --text: #dbe1e8;
+  --text-2: #aab3be;
+  --text-3: #7e8895;
+  --text-inv: #0d1014;
+
+  --accent: #2fb5a6;
+  --accent-2: #46cbbb;
+  --accent-soft: rgba(47, 181, 166, 0.14);
+  --focus: #5fd4c6;
+
+  --malicious: #f05a5f;
+  --malicious-soft: rgba(240, 90, 95, 0.13);
+  --malicious-row: rgba(240, 90, 95, 0.075);
+  --suspicious: #f1a33b;
+  --suspicious-soft: rgba(241, 163, 59, 0.14);
+  --suspicious-row: rgba(241, 163, 59, 0.065);
+  --inconclusive: #9aa6b4;
+  --inconclusive-soft: rgba(154, 166, 180, 0.13);
+  --benign: #46b36a;
+  --benign-soft: rgba(70, 179, 106, 0.13);
+  --failed: #a98bf0;
+  --failed-soft: rgba(169, 139, 240, 0.14);
+  --pending: #6aa7e8;
+  --pending-soft: rgba(106, 167, 232, 0.14);
+
+  --sev-critical: #f05a5f;
+  --sev-high: #f0794f;
+  --sev-medium: #f1a33b;
+  --sev-low: #c7b65a;
+  --sev-info: #7e8895;
+
+  --intel: #c98bf2;
+  --intel-soft: rgba(201, 139, 242, 0.14);
+
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+  --scrim: rgba(5, 7, 10, 0.6);
+
+  /* Graph */
+  --g-bg: #0b0e12;
+  --g-grid: rgba(255, 255, 255, 0.025);
+  --g-edge: rgba(150, 165, 180, 0.22);
+  --g-edge-strong: rgba(150, 175, 195, 0.5);
+  --g-label: #c9d1da;
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --bg: #f4f6f8;
+  --bg-sunken: #eceff3;
+  --panel: #ffffff;
+  --panel-2: #f9fafb;
+  --raised: #ffffff;
+  --hover: #eef1f5;
+  --line: #dde2e8;
+  --line-2: #cbd2db;
+  --text: #18202b;
+  --text-2: #3f4a59;
+  --text-3: #6b7685;
+  --text-inv: #ffffff;
+
+  --accent: #0e8a7d;
+  --accent-2: #0b7469;
+  --accent-soft: rgba(14, 138, 125, 0.1);
+  --focus: #0e8a7d;
+
+  --malicious: #c8282e;
+  --malicious-soft: rgba(200, 40, 46, 0.1);
+  --malicious-row: rgba(200, 40, 46, 0.055);
+  --suspicious: #b26b00;
+  --suspicious-soft: rgba(178, 107, 0, 0.1);
+  --suspicious-row: rgba(178, 107, 0, 0.055);
+  --inconclusive: #5b6676;
+  --inconclusive-soft: rgba(91, 102, 118, 0.1);
+  --benign: #1f8a4c;
+  --benign-soft: rgba(31, 138, 76, 0.1);
+  --failed: #6c4ad1;
+  --failed-soft: rgba(108, 74, 209, 0.1);
+  --pending: #2c6fbf;
+  --pending-soft: rgba(44, 111, 191, 0.1);
+
+  --sev-critical: #c8282e;
+  --sev-high: #c4501f;
+  --sev-medium: #b26b00;
+  --sev-low: #8a7a10;
+  --sev-info: #6b7685;
+
+  --intel: #8b3fc4;
+  --intel-soft: rgba(139, 63, 196, 0.1);
+
+  --shadow: 0 10px 30px rgba(20, 30, 45, 0.14);
+  --scrim: rgba(20, 28, 38, 0.35);
+
+  --g-bg: #f7f9fb;
+  --g-grid: rgba(0, 20, 40, 0.035);
+  --g-edge: rgba(70, 85, 105, 0.25);
+  --g-edge-strong: rgba(50, 70, 95, 0.55);
+  --g-label: #263142;
+  color-scheme: light;
+}

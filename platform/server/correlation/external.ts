@@ -37,6 +37,44 @@ export interface ExternalCampaign {
   messages: string[];
   indicators: { type: string; value: string; matchType: MatchType; strength: number; roles: string[]; messages: number; toIds: boolean }[];
   rationale: string[];
+  /** Ids of all records merged into this one when the source publishes numbered/dated series. */
+  seriesEventIds?: string[];
+  /** The record is a generic indicator dump rather than a named operation. */
+  generic?: boolean;
+}
+
+const DATE_RE = /\b(?:\d{4}-\d{2}-\d{2}|\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.? \d{1,2},? \d{4}|\d{1,2} (?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*,? \d{4})\b/gi;
+const PART_RE = /\bpart \d+\s*(?:\/|of)\s*\d+\b/gi;
+
+/** Name with dates, part counters and numbers removed: records of one generated series share it. */
+export function seriesKey(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(DATE_RE, ' ')
+    .replace(PART_RE, ' ')
+    .replace(/[#\d]+/g, ' ')
+    .replace(/[|:()[\]_,.-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function seriesLabel(name: string): string {
+  const s = name
+    .replace(DATE_RE, '')
+    .replace(PART_RE, '')
+    .replace(/(\s*\|\s*)+/g, ' | ')
+    .replace(/^\s*\|\s*|\s*\|\s*$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return s || name;
+}
+
+const GENERIC_WORDS = new Set(['phishing', 'phish', 'malware', 'spam', 'scam', 'scams', 'ioc', 'iocs', 'indicators', 'indicator', 'feed', 'feeds', 'daily', 'weekly', 'monthly', 'blocklist', 'blacklist', 'list', 'urls', 'url', 'domains', 'domain', 'ips', 'ip', 'hashes', 'threat', 'threats', 'intel', 'osint', 'collection', 'dump', 'export', 'update', 'misc', 'various', 'automated', 'auto', 'generated', 'new', 'latest', 'and', 'of', 'the', 'from', 'sites', 'websites', 'links', 'reported', 'suspicious', 'malicious']);
+
+/** True when a record's name only describes a category of data (no campaign, actor or lure). */
+export function isGenericName(name: string): boolean {
+  const words = seriesKey(name).split(' ').filter(Boolean);
+  return words.length > 0 && words.every((w) => GENERIC_WORDS.has(w));
 }
 
 const HASH = new Set(['md5', 'sha1', 'sha256']);
@@ -179,28 +217,58 @@ export function externalMatches(store: IntelStore, observations: CorrObservation
     if (v.length >= 8) for (const h of eventHits({ intelType: 'subject', value: v })) recordEvent(messageId, 'subject', h);
   }
 
-  const campaigns: ExternalCampaign[] = [];
+  // Automatically generated record series (e.g. daily "Phishing | <date> | Part 12/566" pulses) are
+  // merged into one record; series that do not name an operation are listings, not campaigns.
+  const groups = new Map<string, { hit: EventHit; ids: string[]; dates: number[]; inds: Map<string, ExternalCampaign['indicators'][number] & { msgSet: Set<string> }>; messages: Set<string> }>();
   for (const { hit, inds, messages } of events.values()) {
+    const key = `${hit.source}|${seriesKey(hit.name)}`;
+    const g = groups.get(key);
+    if (!g) {
+      groups.set(key, { hit, ids: [hit.eventId], dates: hit.date ? [hit.date] : [], inds: new Map(inds), messages: new Set(messages) });
+      continue;
+    }
+    g.ids.push(hit.eventId);
+    if (hit.date) g.dates.push(hit.date);
+    for (const m of messages) g.messages.add(m);
+    for (const [k, i] of inds) {
+      const cur = g.inds.get(k);
+      if (!cur) g.inds.set(k, { ...i, msgSet: new Set(i.msgSet) });
+      else {
+        cur.strength = Math.max(cur.strength, i.strength);
+        for (const r of i.roles) if (!cur.roles.includes(r)) cur.roles.push(r);
+        for (const m of i.msgSet) cur.msgSet.add(m);
+      }
+    }
+  }
+
+  const campaigns: ExternalCampaign[] = [];
+  for (const { hit, ids, dates, inds, messages } of groups.values()) {
     const list = [...inds.values()].map(({ msgSet, ...i }) => ({ ...i, messages: msgSet.size })).sort((a, b) => b.strength - a.strength);
     const max = list[0]?.strength ?? 0;
     if (max < 0.3) continue; // only suppressed / trivial overlaps: not an association
+    const generic = isGenericName(hit.name);
     const strongTypes = new Set(list.filter((i) => i.strength >= 0.85).map((i) => i.type));
-    const assessment: ExternalCampaign['assessment'] = max >= 0.85 ? 'reported-association' : 'possible-association';
-    const confidence: ExternalCampaign['confidence'] = strongTypes.size >= 2 ? 'high' : max >= 0.85 ? 'medium' : 'low';
+    const assessment: ExternalCampaign['assessment'] = max >= 0.85 && !generic ? 'reported-association' : 'possible-association';
+    const confidence: ExternalCampaign['confidence'] = generic ? 'low' : strongTypes.size >= 2 ? 'high' : max >= 0.85 ? 'medium' : 'low';
+    const series = ids.length > 1;
     const rationale = [
-      `${list.filter((i) => i.strength > 0).length} indicator(s) from ${messages.size} message(s) appear in this ${hit.source} record.`,
-      assessment === 'reported-association'
-        ? `The strongest overlap is a specific artifact (${list[0]?.type} via ${list[0]?.matchType}).`
-        : 'Only weak overlaps (parent domain, IP address, subject or file name): treat as a lead, not an attribution.',
+      `${list.filter((i) => i.strength > 0).length} indicator(s) from ${messages.size} message(s) appear in ${series ? `${ids.length} records of this ${hit.source} series` : `this ${hit.source} record`}.`,
+      generic
+        ? 'The record is a generic, automatically generated indicator list, not a named campaign: the overlap shows the indicator is known to the source, not which operation it belongs to.'
+        : assessment === 'reported-association'
+          ? `The strongest overlap is a specific artifact (${list[0]?.type} via ${list[0]?.matchType}).`
+          : 'Only weak overlaps (parent domain, IP address, subject or file name): treat as a lead, not an attribution.',
       ...(list.some((i) => i.strength === 0) ? ['Some overlaps were not counted (popular or shared infrastructure).'] : []),
     ];
+    const first = dates.length ? Math.min(...dates) : hit.date;
+    const last = dates.length ? Math.max(...dates) : hit.date;
     campaigns.push({
       source: hit.source,
       eventId: hit.eventId,
-      name: hit.name,
+      name: series ? `${seriesLabel(hit.name)} (series of ${ids.length} records)` : hit.name,
       org: hit.org,
-      date: hit.date,
-      updatedAt: hit.updatedAt,
+      date: first,
+      updatedAt: series ? last : hit.updatedAt,
       tags: hit.tags,
       reference: hit.reference,
       threatLevel: hit.threatLevel,
@@ -209,6 +277,8 @@ export function externalMatches(store: IntelStore, observations: CorrObservation
       messages: [...messages].sort(),
       indicators: list.slice(0, 50),
       rationale,
+      ...(series ? { seriesEventIds: ids.slice(0, 200) } : {}),
+      ...(generic ? { generic: true } : {}),
     });
   }
   campaigns.sort((a, b) => (a.assessment === b.assessment ? b.messages.length - a.messages.length : a.assessment === 'reported-association' ? -1 : 1));

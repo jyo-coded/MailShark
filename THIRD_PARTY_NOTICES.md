@@ -16,6 +16,23 @@ MailShark is MIT-licensed (see [LICENSE](LICENSE)). The add-on bundles the follo
 | [idb](https://github.com/jakearchibald/idb) | 8.0.3 | ISC | © 2016 Jake Archibald |
 | [d3-force](https://github.com/d3/d3-force) | 3.0.0 | ISC | © 2010-2021 Mike Bostock |
 
+## Additional components of the forensic platform (`platform/`, not part of the add-on)
+
+The self-hosted platform reuses the engine and the components above (Preact, Lucide, d3-force,
+postal-mime, tldts, htmlparser2, fflate, jsQR) and adds:
+
+| Component | Version | Licence | Copyright / source |
+|---|---|---|---|
+| [Fastify](https://github.com/fastify/fastify) | 5.12.5 | MIT | © 2016-present The Fastify Team |
+| [@fastify/cookie](https://github.com/fastify/fastify-cookie), [@fastify/multipart](https://github.com/fastify/fastify-multipart), [@fastify/rate-limit](https://github.com/fastify/fastify-rate-limit), [@fastify/static](https://github.com/fastify/fastify-static) | 11.1.3, 10.1.3, 11.2.1, 10.1.6 | MIT | © The Fastify Team and contributors |
+| [docx](https://github.com/dolanmiu/docx) | 9.10.0 | MIT | © Dolan Miu |
+| [@kenjiuno/msgreader](https://github.com/HiraokaHyperTools/msgreader) | 1.28.0 | Apache-2.0 | © kenjiuno, HiraokaHyperTools and contributors |
+| [d3-quadtree](https://github.com/d3/d3-quadtree) (with d3-dispatch, d3-timer via d3-force) | 3.0.1 | ISC | © 2010-2021 Mike Bostock |
+| [Ajv](https://github.com/ajv-validator/ajv) (tests only: report schema validation) | 8.20.0 | MIT | © 2015-2021 Evgeny Poberezkin |
+
+Intelligence downloaded by the platform at runtime (never bundled) is listed with each source's
+terms in [docs/platform/CAMPAIGNS.md](docs/platform/CAMPAIGNS.md#sources).
+
 ## Fonts
 
 | Font | Licence | Notes |

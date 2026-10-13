@@ -13,6 +13,7 @@ export const DEFAULT_KINDS: NodeKind[] = ['message', 'cluster', 'external', 'sen
 export interface GraphQuery {
   kinds: Set<NodeKind>;
   classes: Set<string> | null;
+  severities?: Set<string> | null;
   from: number | null;
   to: number | null;
   minEdge: number;
@@ -116,6 +117,7 @@ export function buildGraph(db: Db, caseId: string, q: GraphQuery): GraphPayload 
   );
   const kept = msgs.filter((m) => {
     if (q.classes && !q.classes.has(m.class ?? 'unknown')) return false;
+    if (q.severities && !q.severities.has(m.severity ?? 'none')) return false;
     const t = m.sent_at ?? m.created_at;
     if (q.from !== null && t < q.from) return false;
     if (q.to !== null && t > q.to) return false;
