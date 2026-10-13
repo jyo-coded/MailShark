@@ -53,6 +53,15 @@ def wait_http(url: str, timeout: float = 60) -> None:
     raise RuntimeError(f"server did not start: {url}")
 
 
+def shot(driver, path: str) -> None:
+    """Screenshot if allowed. Recent Firefox refuses screenshots of privileged (moz-extension://)
+    pages over WebDriver; screenshots are evidence for humans, not test assertions."""
+    try:
+        driver.save_screenshot(path)
+    except Exception as exc:  # noqa: BLE001
+        print(f"note: screenshot {pathlib.Path(path).name} skipped ({str(exc).splitlines()[0][:100]})")
+
+
 def js(driver, script: str, *args):
     return driver.execute_script(script, *args)
 
@@ -126,13 +135,13 @@ def main() -> int:
             time.sleep(0.3)
         check("banner host injected above the message body", host is not None)
         time.sleep(2.5)
-        driver.save_screenshot(str(shots / "01-banner.png"))
+        shot(driver, str(shots / "01-banner.png"))
 
         handles_before = len(driver.window_handles)
         link = driver.find_element(By.CSS_SELECTOR, "div.a3s a")
         link.click()
         time.sleep(1.0)
-        driver.save_screenshot(str(shots / "02-link-guard.png"))
+        shot(driver, str(shots / "02-link-guard.png"))
         trace = js(driver, "return document.documentElement.getAttribute('data-mailshark-e2e-click')")
         check(f"dangerous link intercepted ({trace})", trace == "match:3" and len(driver.window_handles) == handles_before)
 
@@ -151,7 +160,7 @@ def main() -> int:
             time.sleep(0.25)
         check(f"Dissector drawer opens from the banner ({drawer})", drawer == "open")
         time.sleep(1.2)
-        driver.save_screenshot(str(shots / "03-dissector.png"))
+        shot(driver, str(shots / "03-dissector.png"))
 
         # 3) Inbox radar on the list view.
         driver.get(f"{ORIGIN}/mail/u/0/?real=1")
@@ -171,14 +180,14 @@ def main() -> int:
             time.sleep(0.5)
         check(f"inbox radar finished scanning (pending: {pending})", pending == "0")
         time.sleep(1)
-        driver.save_screenshot(str(shots / "04-radar.png"))
+        shot(driver, str(shots / "04-radar.png"))
 
         # 4) Extension pages (privileged: WebDriver may screenshot and click, not script or navigate).
         check("welcome tab opened on install", welcome_handle is not None)
         if welcome_handle:
             driver.switch_to.window(welcome_handle)
             time.sleep(1.5)
-            driver.save_screenshot(str(shots / "05-welcome.png"))
+            shot(driver, str(shots / "05-welcome.png"))
             try:
                 before = set(driver.window_handles)
                 driver.find_element(By.XPATH, "//button[contains(., 'Explore the Lab')]").click()
@@ -188,29 +197,29 @@ def main() -> int:
                 if lab:
                     driver.switch_to.window(lab)
                     time.sleep(2.0)
-                    driver.save_screenshot(str(shots / "06-lab.png"))
+                    shot(driver, str(shots / "06-lab.png"))
                     threats = driver.find_elements(By.CSS_SELECTOR, ".ms-list .ms-mailrow")
                     check(f"overview lists recent threats ({len(threats)} rows)", len(threats) >= 3)
                     driver.find_element(By.XPATH, "//button[contains(., 'Mail history')]").click()
                     time.sleep(1.5)
                     history = driver.find_elements(By.CSS_SELECTOR, ".ms-list .ms-mailrow")
                     check(f"mail history lists dissected emails ({len(history)} rows)", len(history) >= 10)
-                    driver.save_screenshot(str(shots / "06b-history.png"))
+                    shot(driver, str(shots / "06b-history.png"))
                     driver.find_element(By.XPATH, "//button[contains(., 'Campaigns')]").click()
                     time.sleep(1.5)
-                    driver.save_screenshot(str(shots / "07-campaigns.png"))
+                    shot(driver, str(shots / "07-campaigns.png"))
                     cards = driver.find_elements(By.CSS_SELECTOR, ".ms-camp-card")
                     check(f"campaign traced across rotated variants ({len(cards)} card)", len(cards) >= 1)
                     if cards:
                         cards[0].click()
                         time.sleep(2.0)
-                        driver.save_screenshot(str(shots / "08-campaign-detail.png"))
+                        shot(driver, str(shots / "08-campaign-detail.png"))
                     driver.find_element(By.XPATH, "//button[contains(., 'Academy')]").click()
                     time.sleep(1.0)
-                    driver.save_screenshot(str(shots / "09-academy.png"))
+                    shot(driver, str(shots / "09-academy.png"))
                     driver.find_element(By.XPATH, "//button[contains(., 'Settings')]").click()
                     time.sleep(1.0)
-                    driver.save_screenshot(str(shots / "10-settings.png"))
+                    shot(driver, str(shots / "10-settings.png"))
                     # Offline analysis: the path reviewers use without a Gmail account.
                     driver.find_element(By.XPATH, "//button[contains(., 'Analyze files')]").click()
                     time.sleep(1.0)
@@ -224,7 +233,7 @@ def main() -> int:
                             break
                         time.sleep(0.5)
                     check(f"offline analysis of .eml files ({len(results)}/{len(emls)} results)", len(results) == len(emls))
-                    driver.save_screenshot(str(shots / "11-analyze.png"))
+                    shot(driver, str(shots / "11-analyze.png"))
             except Exception as exc:  # noqa: BLE001
                 check(f"extension pages interactive ({type(exc).__name__}: {exc})", False)
     finally:
