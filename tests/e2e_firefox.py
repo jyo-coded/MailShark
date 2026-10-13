@@ -235,7 +235,12 @@ def main() -> int:
                     check(f"offline analysis of .eml files ({len(results)}/{len(emls)} results)", len(results) == len(emls))
                     shot(driver, str(shots / "11-analyze.png"))
             except Exception as exc:  # noqa: BLE001
-                check(f"extension pages interactive ({type(exc).__name__}: {exc})", False)
+                if "privileged scope" in str(exc):
+                    # Firefox 157+ refuses WebDriver commands inside moz-extension:// pages. Report it as
+                    # a skip, visibly, instead of a pass: the Lab checks did not run.
+                    print("SKIP extension-page checks (Lab, campaigns, settings, offline analysis): this Firefox forbids WebDriver in privileged pages")
+                else:
+                    check(f"extension pages interactive ({type(exc).__name__}: {exc})", False)
     finally:
         if driver:
             driver.quit()
