@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "generated": "2026-11-07T10:16:28+00:00",
+  "allowlist": "Tranco top 100000 (https://tranco-list.eu)",
+  "lists": [
+    {
+      "name": "phishing-database",
+      "file": "phishing-database.bloom",
+      "m": 11269672,
+      "k": 20,
+      "count": 391918,
+      "sha256": "698ade47c0b20067c8c40d1c982ac7f2564311cb64173b61574e5bc6467b67de",
+      "updated": "2026-11-07T10:16:28+00:00",
+      "source": "https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+      "license": "MIT, Phishing.Database (Mitchell Krog et al.)"
+    }
+  ]
+}
